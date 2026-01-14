@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: '3'
+
+tasks:
+  dev:
+    desc: Start development server
+    cmds:
+      - bun run dev
+
+  build:
+    desc: Build the application
+    cmds:
+      - bun run build
+
+  test:
+    desc: Run tests
+    cmds:
+      - bun run test
+
+  lint:
+    desc: Run Biome linter
+    cmds:
+      - bun run biome check .
+
+  lint:fix:
+    desc: Run Biome linter and fix issues
+    cmds:
+      - bun run biome check --write .
+
+  format:
+    desc: Format code with Biome
+    cmds:
+      - bun run biome format --write .
+
+  typecheck:
+    desc: Run TypeScript type checking
+    cmds:
+      - bun run tsc --noEmit
+
+  check:
+    desc: Run all checks (typecheck, lint, test)
+    cmds:
+      - task: typecheck
+      - task: lint
+      - task: test
