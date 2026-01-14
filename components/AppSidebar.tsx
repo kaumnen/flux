@@ -2,7 +2,7 @@
 
 import { Bot, LogOut, Plug, User } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ export function AppSidebar() {
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | undefined>();
   const pathname = usePathname();
+  const router = useRouter();
 
   const { isAuthenticated, userInfo, setUnauthenticated } = useAuthStore();
   const utils = trpc.useUtils();
@@ -48,6 +49,7 @@ export function AppSidebar() {
     onSuccess: () => {
       utils.aws.invalidate();
       setUnauthenticated();
+      router.push("/");
     },
   });
 

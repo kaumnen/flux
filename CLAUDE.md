@@ -1,6 +1,25 @@
-# Flux 
+# Flux
 
 AWS LexV2 helper app. NextJS v16 with tRPC.
+
+## Project Structure
+
+Key directories and files:
+- `app/` - Next.js App Router pages
+  - `app/page.tsx` - Home page
+  - `app/bots/[botId]/page.tsx` - Bot detail page
+  - `app/layout.tsx` - Root layout
+- `components/` - React components
+  - `components/ui/` - shadcn/ui components
+  - `components/AppSidebar.tsx` - Main sidebar with auth controls
+  - `components/CredentialsModal.tsx` - AWS credentials form
+  - `components/BotDetail.tsx` - Bot detail view
+- `lib/` - Utilities and stores
+  - `lib/stores/auth-store.ts` - Zustand auth state
+  - `lib/trpc/` - tRPC client/server setup
+- `server/` - Backend
+  - `server/routers/aws.ts` - AWS/Lex API routes
+  - `server/routers/index.ts` - tRPC router
 
 ## Task Runner
 

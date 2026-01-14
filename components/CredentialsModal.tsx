@@ -179,6 +179,7 @@ export function CredentialsModal({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<CredentialsFormData>({
     resolver: zodResolver(credentialsSchema),
@@ -220,6 +221,16 @@ export function CredentialsModal({
   };
 
   const selectedRegion = watch("region");
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      reset();
+      setPasteText("");
+      setParseStatus(null);
+      setError(null);
+    }
+  }, [open, reset]);
 
   // Auto-parse credentials as user types/pastes
   useEffect(() => {
