@@ -56,7 +56,7 @@ interface ParsedCredentials {
 function parseCredentials(text: string): ParsedCredentials | null {
   const result: ParsedCredentials = {};
 
-  // Try environment variable format: export AWS_ACCESS_KEY_ID="value"
+  // Unix/macOS: export AWS_ACCESS_KEY_ID="value"
   const envPatterns = {
     accessKeyId: /export\s+AWS_ACCESS_KEY_ID=["']?([^"'\s\n]+)["']?/i,
     secretAccessKey: /export\s+AWS_SECRET_ACCESS_KEY=["']?([^"'\s\n]+)["']?/i,
@@ -64,7 +64,23 @@ function parseCredentials(text: string): ParsedCredentials | null {
     region: /export\s+AWS_(?:DEFAULT_)?REGION=["']?([^"'\s\n]+)["']?/i,
   };
 
-  // Try credentials file format: aws_access_key_id=value
+  // Windows CMD: SET AWS_ACCESS_KEY_ID=value
+  const cmdPatterns = {
+    accessKeyId: /SET\s+AWS_ACCESS_KEY_ID=([^\s\n]+)/i,
+    secretAccessKey: /SET\s+AWS_SECRET_ACCESS_KEY=([^\s\n]+)/i,
+    sessionToken: /SET\s+AWS_SESSION_TOKEN=([^\s\n]+)/i,
+    region: /SET\s+AWS_(?:DEFAULT_)?REGION=([^\s\n]+)/i,
+  };
+
+  // PowerShell: $Env:AWS_ACCESS_KEY_ID="value"
+  const psPatterns = {
+    accessKeyId: /\$Env:AWS_ACCESS_KEY_ID=["']?([^"'\s\n]+)["']?/i,
+    secretAccessKey: /\$Env:AWS_SECRET_ACCESS_KEY=["']?([^"'\s\n]+)["']?/i,
+    sessionToken: /\$Env:AWS_SESSION_TOKEN=["']?([^"'\s\n]+)["']?/i,
+    region: /\$Env:AWS_(?:DEFAULT_)?REGION=["']?([^"'\s\n]+)["']?/i,
+  };
+
+  // Credentials file: aws_access_key_id=value
   const filePatterns = {
     accessKeyId: /aws_access_key_id\s*=\s*([^\s\n]+)/i,
     secretAccessKey: /aws_secret_access_key\s*=\s*([^\s\n]+)/i,
@@ -72,38 +88,25 @@ function parseCredentials(text: string): ParsedCredentials | null {
     region: /region\s*=\s*([^\s\n]+)/i,
   };
 
-  // Try env format first
-  let match = text.match(envPatterns.accessKeyId);
-  if (match) result.accessKeyId = match[1];
+  const allPatterns = [envPatterns, cmdPatterns, psPatterns, filePatterns];
 
-  match = text.match(envPatterns.secretAccessKey);
-  if (match) result.secretAccessKey = match[1];
-
-  match = text.match(envPatterns.sessionToken);
-  if (match) result.sessionToken = match[1];
-
-  match = text.match(envPatterns.region);
-  if (match) result.region = match[1];
-
-  // If no env format found, try file format
-  if (!result.accessKeyId) {
-    match = text.match(filePatterns.accessKeyId);
-    if (match) result.accessKeyId = match[1];
-  }
-
-  if (!result.secretAccessKey) {
-    match = text.match(filePatterns.secretAccessKey);
-    if (match) result.secretAccessKey = match[1];
-  }
-
-  if (!result.sessionToken) {
-    match = text.match(filePatterns.sessionToken);
-    if (match) result.sessionToken = match[1];
-  }
-
-  if (!result.region) {
-    match = text.match(filePatterns.region);
-    if (match) result.region = match[1];
+  for (const patterns of allPatterns) {
+    if (!result.accessKeyId) {
+      const match = text.match(patterns.accessKeyId);
+      if (match) result.accessKeyId = match[1];
+    }
+    if (!result.secretAccessKey) {
+      const match = text.match(patterns.secretAccessKey);
+      if (match) result.secretAccessKey = match[1];
+    }
+    if (!result.sessionToken) {
+      const match = text.match(patterns.sessionToken);
+      if (match) result.sessionToken = match[1];
+    }
+    if (!result.region) {
+      const match = text.match(patterns.region);
+      if (match) result.region = match[1];
+    }
   }
 
   // Return null if we didn't find at least access key and secret
