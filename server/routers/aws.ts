@@ -1,4 +1,5 @@
 import {
+  DescribeBotCommand,
   LexModelsV2Client,
   ListBotsCommand,
 } from "@aws-sdk/client-lex-models-v2";
@@ -159,4 +160,32 @@ export const awsRouter = router({
       handleAWSError(error, ctx.credentials.isSSO);
     }
   }),
+
+  describeBot: protectedProcedure
+    .input(z.object({ botId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new DescribeBotCommand({ botId: input.botId })
+        );
+        return {
+          botId: response.botId,
+          botName: response.botName,
+          botStatus: response.botStatus,
+          description: response.description,
+          roleArn: response.roleArn,
+          idleSessionTTLInSeconds: response.idleSessionTTLInSeconds,
+          dataPrivacy: response.dataPrivacy,
+          creationDateTime: response.creationDateTime?.toISOString(),
+          lastUpdatedDateTime: response.lastUpdatedDateTime?.toISOString(),
+          botType: response.botType,
+          botMembers: response.botMembers,
+          failureReasons: response.failureReasons,
+        };
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
 });

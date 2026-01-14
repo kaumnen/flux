@@ -6,6 +6,13 @@ AWS LexV2 helper app. NextJS v16 with tRPC.
 
 This repo uses [Task](https://taskfile.dev) as a task runner. Commands are defined in `Taskfile.yml` at the repo root.
 
+**Always use `task <command>` instead of `bun run <command>` directly.** Available tasks:
+- `task lint` - Run Biome linter
+- `task lint:fix` - Run Biome linter and fix issues
+- `task format` - Format code with Biome
+- `task typecheck` - Run TypeScript type checking
+- `task check` - Run all checks (typecheck, lint, test)
+
 ## Important General info
 
 - Use `Bun` only. Do NOT use npm, pnpm, yarn etc. 

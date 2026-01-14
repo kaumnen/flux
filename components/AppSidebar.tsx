@@ -1,6 +1,8 @@
 "use client";
 
 import { Bot, LogOut, Plug, User } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +26,7 @@ import { ThemeToggle } from "./ThemeToggle";
 export function AppSidebar() {
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | undefined>();
+  const pathname = usePathname();
 
   const { isAuthenticated, userInfo, setUnauthenticated } = useAuthStore();
 
@@ -101,10 +104,14 @@ export function AppSidebar() {
                   botsQuery.data?.map((bot) => (
                     <SidebarMenuItem key={bot.botId}>
                       <SidebarMenuButton
+                        asChild
+                        isActive={pathname === `/bots/${bot.botId}`}
                         tooltip={bot.description || bot.botName}
                       >
-                        <Bot className="size-4" />
-                        <span>{bot.botName}</span>
+                        <Link href={`/bots/${bot.botId}`}>
+                          <Bot className="size-4" />
+                          <span>{bot.botName}</span>
+                        </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))
