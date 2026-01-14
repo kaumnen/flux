@@ -29,6 +29,7 @@ export function AppSidebar() {
   const pathname = usePathname();
 
   const { isAuthenticated, userInfo, setUnauthenticated } = useAuthStore();
+  const utils = trpc.useUtils();
 
   const botsQuery = trpc.aws.listBots.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -45,6 +46,7 @@ export function AppSidebar() {
 
   const disconnectMutation = trpc.aws.disconnect.useMutation({
     onSuccess: () => {
+      utils.aws.invalidate();
       setUnauthenticated();
     },
   });

@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ClipboardPaste } from "lucide-react";
-import { useState } from "react";
+import { Check } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import { Button } from "@/components/ui/button";
@@ -56,56 +56,85 @@ interface ParsedCredentials {
 function parseCredentials(text: string): ParsedCredentials | null {
   const result: ParsedCredentials = {};
 
-  // Unix/macOS: export AWS_ACCESS_KEY_ID="value"
-  const envPatterns = {
-    accessKeyId: /export\s+AWS_ACCESS_KEY_ID=["']?([^"'\s\n]+)["']?/i,
-    secretAccessKey: /export\s+AWS_SECRET_ACCESS_KEY=["']?([^"'\s\n]+)["']?/i,
-    sessionToken: /export\s+AWS_SESSION_TOKEN=["']?([^"'\s\n]+)["']?/i,
-    region: /export\s+AWS_(?:DEFAULT_)?REGION=["']?([^"'\s\n]+)["']?/i,
+  // Helper to extract value - handles both quoted (possibly multi-line) and unquoted values
+  function extractValue(text: string, prefix: RegExp): string | null {
+    const prefixMatch = text.match(prefix);
+    if (!prefixMatch) return null;
+
+    const afterPrefix = text.slice(
+      (prefixMatch.index ?? 0) + prefixMatch[0].length
+    );
+
+    // Check if value is quoted
+    if (afterPrefix.startsWith('"')) {
+      // Find closing quote, handling multi-line
+      const endQuote = afterPrefix.indexOf('"', 1);
+      if (endQuote > 0) {
+        return afterPrefix.slice(1, endQuote).replace(/[\s\n]+/g, "");
+      }
+    } else if (afterPrefix.startsWith("'")) {
+      const endQuote = afterPrefix.indexOf("'", 1);
+      if (endQuote > 0) {
+        return afterPrefix.slice(1, endQuote).replace(/[\s\n]+/g, "");
+      }
+    } else {
+      // Unquoted - take until whitespace
+      const match = afterPrefix.match(/^([^\s\n]+)/);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
+  // Define prefixes for each format
+  const prefixes = {
+    // Unix/macOS: export AWS_ACCESS_KEY_ID="value"
+    env: {
+      accessKeyId: /export\s+AWS_ACCESS_KEY_ID=/i,
+      secretAccessKey: /export\s+AWS_SECRET_ACCESS_KEY=/i,
+      sessionToken: /export\s+AWS_SESSION_TOKEN=/i,
+      region: /export\s+AWS_(?:DEFAULT_)?REGION=/i,
+    },
+    // Windows CMD: SET AWS_ACCESS_KEY_ID=value
+    cmd: {
+      accessKeyId: /SET\s+AWS_ACCESS_KEY_ID=/i,
+      secretAccessKey: /SET\s+AWS_SECRET_ACCESS_KEY=/i,
+      sessionToken: /SET\s+AWS_SESSION_TOKEN=/i,
+      region: /SET\s+AWS_(?:DEFAULT_)?REGION=/i,
+    },
+    // PowerShell: $Env:AWS_ACCESS_KEY_ID="value"
+    ps: {
+      accessKeyId: /\$Env:AWS_ACCESS_KEY_ID=/i,
+      secretAccessKey: /\$Env:AWS_SECRET_ACCESS_KEY=/i,
+      sessionToken: /\$Env:AWS_SESSION_TOKEN=/i,
+      region: /\$Env:AWS_(?:DEFAULT_)?REGION=/i,
+    },
+    // Credentials file: aws_access_key_id=value
+    file: {
+      accessKeyId: /aws_access_key_id\s*=\s*/i,
+      secretAccessKey: /aws_secret_access_key\s*=\s*/i,
+      sessionToken: /aws_session_token\s*=\s*/i,
+      region: /(?<!default_)region\s*=\s*/i,
+    },
   };
 
-  // Windows CMD: SET AWS_ACCESS_KEY_ID=value
-  const cmdPatterns = {
-    accessKeyId: /SET\s+AWS_ACCESS_KEY_ID=([^\s\n]+)/i,
-    secretAccessKey: /SET\s+AWS_SECRET_ACCESS_KEY=([^\s\n]+)/i,
-    sessionToken: /SET\s+AWS_SESSION_TOKEN=([^\s\n]+)/i,
-    region: /SET\s+AWS_(?:DEFAULT_)?REGION=([^\s\n]+)/i,
-  };
+  const allPrefixes = [prefixes.env, prefixes.cmd, prefixes.ps, prefixes.file];
 
-  // PowerShell: $Env:AWS_ACCESS_KEY_ID="value"
-  const psPatterns = {
-    accessKeyId: /\$Env:AWS_ACCESS_KEY_ID=["']?([^"'\s\n]+)["']?/i,
-    secretAccessKey: /\$Env:AWS_SECRET_ACCESS_KEY=["']?([^"'\s\n]+)["']?/i,
-    sessionToken: /\$Env:AWS_SESSION_TOKEN=["']?([^"'\s\n]+)["']?/i,
-    region: /\$Env:AWS_(?:DEFAULT_)?REGION=["']?([^"'\s\n]+)["']?/i,
-  };
-
-  // Credentials file: aws_access_key_id=value
-  const filePatterns = {
-    accessKeyId: /aws_access_key_id\s*=\s*([^\s\n]+)/i,
-    secretAccessKey: /aws_secret_access_key\s*=\s*([^\s\n]+)/i,
-    sessionToken: /aws_session_token\s*=\s*([^\s\n]+)/i,
-    region: /region\s*=\s*([^\s\n]+)/i,
-  };
-
-  const allPatterns = [envPatterns, cmdPatterns, psPatterns, filePatterns];
-
-  for (const patterns of allPatterns) {
+  for (const p of allPrefixes) {
     if (!result.accessKeyId) {
-      const match = text.match(patterns.accessKeyId);
-      if (match) result.accessKeyId = match[1];
+      const val = extractValue(text, p.accessKeyId);
+      if (val) result.accessKeyId = val;
     }
     if (!result.secretAccessKey) {
-      const match = text.match(patterns.secretAccessKey);
-      if (match) result.secretAccessKey = match[1];
+      const val = extractValue(text, p.secretAccessKey);
+      if (val) result.secretAccessKey = val;
     }
     if (!result.sessionToken) {
-      const match = text.match(patterns.sessionToken);
-      if (match) result.sessionToken = match[1];
+      const val = extractValue(text, p.sessionToken);
+      if (val) result.sessionToken = val;
     }
     if (!result.region) {
-      const match = text.match(patterns.region);
-      if (match) result.region = match[1];
+      const val = extractValue(text, p.region);
+      if (val) result.region = val;
     }
   }
 
@@ -139,7 +168,10 @@ export function CredentialsModal({
 }: CredentialsModalProps) {
   const [error, setError] = useState<string | null>(errorMessage ?? null);
   const [pasteText, setPasteText] = useState("");
-  const [parseSuccess, setParseSuccess] = useState(false);
+  const [parseStatus, setParseStatus] = useState<{
+    found: string[];
+    applied: boolean;
+  } | null>(null);
   const setAuthenticated = useAuthStore((state) => state.setAuthenticated);
 
   const {
@@ -189,23 +221,38 @@ export function CredentialsModal({
 
   const selectedRegion = watch("region");
 
-  const handlePasteCredentials = () => {
+  // Auto-parse credentials as user types/pastes
+  useEffect(() => {
+    if (!pasteText.trim()) {
+      setParseStatus(null);
+      return;
+    }
+
     const parsed = parseCredentials(pasteText);
     if (parsed) {
-      if (parsed.accessKeyId) setValue("accessKeyId", parsed.accessKeyId);
-      if (parsed.secretAccessKey)
+      const found: string[] = [];
+      if (parsed.accessKeyId) {
+        setValue("accessKeyId", parsed.accessKeyId);
+        found.push("Access Key");
+      }
+      if (parsed.secretAccessKey) {
         setValue("secretAccessKey", parsed.secretAccessKey);
-      if (parsed.sessionToken) setValue("sessionToken", parsed.sessionToken);
+        found.push("Secret Key");
+      }
+      if (parsed.sessionToken) {
+        setValue("sessionToken", parsed.sessionToken);
+        found.push("Session Token");
+      }
       if (parsed.region && isValidRegion(parsed.region)) {
         setValue("region", parsed.region);
+        found.push("Region");
       }
-      setParseSuccess(true);
-      setPasteText("");
-      setTimeout(() => setParseSuccess(false), 2000);
+      setParseStatus({ found, applied: true });
+      setError(null);
     } else {
-      setError("Could not parse credentials. Please check the format.");
+      setParseStatus(null);
     }
-  };
+  }, [pasteText, setValue]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -224,9 +271,10 @@ export function CredentialsModal({
             </div>
           )}
 
-          {parseSuccess && (
-            <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
-              Credentials parsed successfully!
+          {parseStatus?.applied && (
+            <div className="flex items-center gap-1.5 rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
+              <Check className="size-4" />
+              <span>Found: {parseStatus.found.join(", ")}</span>
             </div>
           )}
 
@@ -234,30 +282,18 @@ export function CredentialsModal({
             <Label htmlFor="pasteCredentials">
               Quick Paste{" "}
               <span className="text-muted-foreground">
-                (env vars or credentials file format)
+                (paste credentials and fields auto-fill)
               </span>
             </Label>
-            <div className="flex gap-2">
-              <Textarea
-                id="pasteCredentials"
-                placeholder={`export AWS_ACCESS_KEY_ID="..."
-export AWS_SECRET_ACCESS_KEY="..."
-export AWS_SESSION_TOKEN="..."`}
-                value={pasteText}
-                onChange={(e) => setPasteText(e.target.value)}
-                className="min-h-[80px] font-mono text-xs"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                onClick={handlePasteCredentials}
-                disabled={!pasteText.trim()}
-              >
-                <ClipboardPaste className="size-4" />
-              </Button>
-            </div>
+            <Textarea
+              id="pasteCredentials"
+              placeholder={`Paste your AWS credentials here...
+export AWS_ACCESS_KEY_ID="..."
+$Env:AWS_SECRET_ACCESS_KEY="..."`}
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              className="min-h-[80px] max-h-[120px] overflow-auto break-all font-mono text-xs"
+            />
           </div>
 
           <div className="relative">
