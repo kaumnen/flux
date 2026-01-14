@@ -1,9 +1,26 @@
 "use client";
 
-import { AlertCircle, Bot, Calendar, Clock, Shield } from "lucide-react";
+import {
+  AlertCircle,
+  Bot,
+  Calendar,
+  Clock,
+  Code,
+  GitBranch,
+  Shield,
+  Tag,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc/client";
 
@@ -22,9 +39,36 @@ function StatusBadge({ status }: { status?: string }) {
   return <Badge variant={variant}>{status ?? "Unknown"}</Badge>;
 }
 
-function formatDate(dateString?: string) {
+function formatRelativeTime(dateString?: string): string {
   if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleString();
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays > 0) {
+    return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
+  }
+  if (diffHours > 0) {
+    return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
+  }
+  if (diffMinutes > 0) {
+    return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
+  }
+  return "Just now";
+}
+
+function formatDateTime(dateString?: string): string {
+  if (!dateString) return "N/A";
+
+  const date = new Date(dateString);
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  return `${date.toLocaleString()} (${timezone})`;
 }
 
 function formatDuration(seconds?: number) {
@@ -37,8 +81,23 @@ function formatDuration(seconds?: number) {
   return `${hours}h ${remainingMinutes}m`;
 }
 
+function DateTimeDisplay({ dateString }: { dateString?: string }) {
+  if (!dateString) return <span>N/A</span>;
+
+  return (
+    <div className="flex flex-col">
+      <span>{formatRelativeTime(dateString)}</span>
+      <span className="text-xs text-muted-foreground">
+        {formatDateTime(dateString)}
+      </span>
+    </div>
+  );
+}
+
 export function BotDetail({ botId }: BotDetailProps) {
   const botQuery = trpc.aws.describeBot.useQuery({ botId });
+  const versionsQuery = trpc.aws.listBotVersions.useQuery({ botId });
+  const aliasesQuery = trpc.aws.listBotAliases.useQuery({ botId });
 
   if (botQuery.isLoading) {
     return <BotDetailSkeleton />;
@@ -83,6 +142,8 @@ export function BotDetail({ botId }: BotDetailProps) {
       <Tabs defaultValue="simple">
         <TabsList>
           <TabsTrigger value="simple">Simple</TabsTrigger>
+          <TabsTrigger value="aliases">Aliases</TabsTrigger>
+          <TabsTrigger value="versions">Versions</TabsTrigger>
           <TabsTrigger value="advanced">Advanced</TabsTrigger>
         </TabsList>
 
@@ -118,7 +179,7 @@ export function BotDetail({ botId }: BotDetailProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>{formatDate(bot.creationDateTime)}</p>
+                <DateTimeDisplay dateString={bot.creationDateTime} />
               </CardContent>
             </Card>
 
@@ -130,10 +191,108 @@ export function BotDetail({ botId }: BotDetailProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p>{formatDate(bot.lastUpdatedDateTime)}</p>
+                <DateTimeDisplay dateString={bot.lastUpdatedDateTime} />
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="aliases" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Tag className="size-4" />
+                Bot Aliases
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {aliasesQuery.isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : aliasesQuery.data?.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No aliases found
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Alias Name</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Lambda</TableHead>
+                      <TableHead>Updated</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {aliasesQuery.data?.map((alias) => (
+                      <AliasRow
+                        key={alias.botAliasId}
+                        botId={botId}
+                        alias={alias}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="versions" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <GitBranch className="size-4" />
+                Bot Versions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {versionsQuery.isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : versionsQuery.data?.length === 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  No versions found
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Created</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {versionsQuery.data?.map((version) => (
+                      <TableRow key={version.botVersion}>
+                        <TableCell className="font-mono">
+                          {version.botVersion}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={version.botStatus} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {version.description || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <DateTimeDisplay
+                            dateString={version.creationDateTime}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="advanced" className="mt-4">
@@ -231,6 +390,64 @@ export function BotDetail({ botId }: BotDetailProps) {
   );
 }
 
+interface AliasRowProps {
+  botId: string;
+  alias: {
+    botAliasId?: string;
+    botAliasName?: string;
+    botVersion?: string;
+    botAliasStatus?: string;
+    lastUpdatedDateTime?: string;
+  };
+}
+
+function AliasRow({ botId, alias }: AliasRowProps) {
+  const aliasDetailQuery = trpc.aws.describeBotAlias.useQuery(
+    { botId, botAliasId: alias.botAliasId ?? "" },
+    { enabled: !!alias.botAliasId }
+  );
+
+  const lambdaArns = aliasDetailQuery.data?.lambdaArns;
+  const hasLambda = lambdaArns && Object.values(lambdaArns).some(Boolean);
+
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{alias.botAliasName}</TableCell>
+      <TableCell className="font-mono">{alias.botVersion || "-"}</TableCell>
+      <TableCell>
+        <StatusBadge status={alias.botAliasStatus} />
+      </TableCell>
+      <TableCell>
+        {aliasDetailQuery.isLoading ? (
+          <Skeleton className="h-4 w-24" />
+        ) : hasLambda ? (
+          <div className="flex flex-col gap-1">
+            {Object.entries(lambdaArns).map(
+              ([locale, arn]) =>
+                arn && (
+                  <div key={locale} className="flex items-center gap-1">
+                    <Code className="size-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {locale}:
+                    </span>
+                    <span className="font-mono text-xs truncate max-w-48">
+                      {arn.split(":").pop()}
+                    </span>
+                  </div>
+                )
+            )}
+          </div>
+        ) : (
+          <span className="text-muted-foreground">-</span>
+        )}
+      </TableCell>
+      <TableCell>
+        <DateTimeDisplay dateString={alias.lastUpdatedDateTime} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function BotDetailSkeleton() {
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -246,7 +463,7 @@ function BotDetailSkeleton() {
       </div>
 
       <div className="space-y-4">
-        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-10 w-64" />
         <div className="grid gap-4 md:grid-cols-2">
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />

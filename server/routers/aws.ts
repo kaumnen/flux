@@ -1,7 +1,10 @@
 import {
+  DescribeBotAliasCommand,
   DescribeBotCommand,
   LexModelsV2Client,
+  ListBotAliasesCommand,
   ListBotsCommand,
+  ListBotVersionsCommand,
 } from "@aws-sdk/client-lex-models-v2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { TRPCError } from "@trpc/server";
@@ -183,6 +186,96 @@ export const awsRouter = router({
           botType: response.botType,
           botMembers: response.botMembers,
           failureReasons: response.failureReasons,
+        };
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listBotVersions: protectedProcedure
+    .input(z.object({ botId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListBotVersionsCommand({
+            botId: input.botId,
+            sortBy: { attribute: "BotVersion", order: "Descending" },
+          })
+        );
+        return (
+          response.botVersionSummaries?.map((version) => ({
+            botVersion: version.botVersion,
+            botName: version.botName,
+            botStatus: version.botStatus,
+            description: version.description,
+            creationDateTime: version.creationDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listBotAliases: protectedProcedure
+    .input(z.object({ botId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListBotAliasesCommand({ botId: input.botId })
+        );
+        return (
+          response.botAliasSummaries?.map((alias) => ({
+            botAliasId: alias.botAliasId,
+            botAliasName: alias.botAliasName,
+            botVersion: alias.botVersion,
+            botAliasStatus: alias.botAliasStatus,
+            description: alias.description,
+            creationDateTime: alias.creationDateTime?.toISOString(),
+            lastUpdatedDateTime: alias.lastUpdatedDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  describeBotAlias: protectedProcedure
+    .input(
+      z.object({ botId: z.string().min(1), botAliasId: z.string().min(1) })
+    )
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new DescribeBotAliasCommand({
+            botId: input.botId,
+            botAliasId: input.botAliasId,
+          })
+        );
+
+        const localeSettings = response.botAliasLocaleSettings;
+        const lambdaArns: Record<string, string | undefined> = {};
+        if (localeSettings) {
+          for (const [locale, settings] of Object.entries(localeSettings)) {
+            lambdaArns[locale] =
+              settings.codeHookSpecification?.lambdaCodeHook?.lambdaARN;
+          }
+        }
+
+        return {
+          botAliasId: response.botAliasId,
+          botAliasName: response.botAliasName,
+          botVersion: response.botVersion,
+          botAliasStatus: response.botAliasStatus,
+          description: response.description,
+          lambdaArns,
+          creationDateTime: response.creationDateTime?.toISOString(),
+          lastUpdatedDateTime: response.lastUpdatedDateTime?.toISOString(),
         };
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);
