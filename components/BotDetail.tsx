@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 
 interface BotDetailProps {
@@ -95,9 +96,20 @@ function DateTimeDisplay({ dateString }: { dateString?: string }) {
 }
 
 export function BotDetail({ botId }: BotDetailProps) {
-  const botQuery = trpc.aws.describeBot.useQuery({ botId });
-  const versionsQuery = trpc.aws.listBotVersions.useQuery({ botId });
-  const aliasesQuery = trpc.aws.listBotAliases.useQuery({ botId });
+  const { isAuthenticated } = useAuthStore();
+
+  const botQuery = trpc.aws.describeBot.useQuery(
+    { botId },
+    { enabled: isAuthenticated }
+  );
+  const versionsQuery = trpc.aws.listBotVersions.useQuery(
+    { botId },
+    { enabled: isAuthenticated }
+  );
+  const aliasesQuery = trpc.aws.listBotAliases.useQuery(
+    { botId },
+    { enabled: isAuthenticated }
+  );
 
   if (botQuery.isLoading) {
     return <BotDetailSkeleton />;
@@ -402,9 +414,11 @@ interface AliasRowProps {
 }
 
 function AliasRow({ botId, alias }: AliasRowProps) {
+  const { isAuthenticated } = useAuthStore();
+
   const aliasDetailQuery = trpc.aws.describeBotAlias.useQuery(
     { botId, botAliasId: alias.botAliasId ?? "" },
-    { enabled: !!alias.botAliasId }
+    { enabled: isAuthenticated && !!alias.botAliasId }
   );
 
   const lambdaArns = aliasDetailQuery.data?.lambdaArns;

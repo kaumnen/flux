@@ -1,6 +1,12 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import { cookies } from "next/headers";
 import superjson from "superjson";
+import {
+  deleteSession,
+  getSession as getSessionFromStore,
+  type SessionData,
+  setSession as setSessionInStore,
+} from "@/lib/session-store";
 
 export interface AWSCredentials {
   accessKeyId: string;
@@ -10,11 +16,7 @@ export interface AWSCredentials {
   isSSO: boolean;
 }
 
-export interface Session {
-  credentials?: AWSCredentials;
-}
-
-const sessionStore = new Map<string, Session>();
+export type Session = SessionData;
 
 function generateSessionId(): string {
   return crypto.randomUUID();
@@ -27,15 +29,17 @@ export async function getSession(): Promise<{
   const cookieStore = await cookies();
   let sessionId = cookieStore.get("session_id")?.value;
 
-  if (!sessionId || !sessionStore.has(sessionId)) {
+  if (!sessionId) {
     sessionId = generateSessionId();
-    sessionStore.set(sessionId, {});
+    return { session: {}, sessionId };
   }
 
-  return {
-    session: sessionStore.get(sessionId) || {},
-    sessionId,
-  };
+  const session = getSessionFromStore(sessionId);
+  if (!session) {
+    return { session: {}, sessionId };
+  }
+
+  return { session, sessionId };
 }
 
 export async function setSessionCookie(sessionId: string): Promise<void> {
@@ -50,11 +54,27 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
 }
 
 export function updateSession(sessionId: string, session: Session): void {
-  sessionStore.set(sessionId, session);
+  setSessionInStore(sessionId, session);
 }
 
 export function clearSession(sessionId: string): void {
-  sessionStore.delete(sessionId);
+  deleteSession(sessionId);
+}
+
+export async function getServerAuthState(): Promise<{
+  isAuthenticated: boolean;
+  userInfo: { region: string } | null;
+  isSSO: boolean;
+} | null> {
+  const { session } = await getSession();
+  if (!session.credentials) {
+    return null;
+  }
+  return {
+    isAuthenticated: true,
+    userInfo: { region: session.credentials.region },
+    isSSO: session.credentials.isSSO,
+  };
 }
 
 export async function createContext() {

@@ -6,12 +6,12 @@ tasks:
   dev:
     desc: Start development server
     cmds:
-      - bun run dev
+      - bun --bun run dev
 
   build:
     desc: Build the application
     cmds:
-      - bun run build
+      - bun --bun run build
 
   test:
     desc: Run tests

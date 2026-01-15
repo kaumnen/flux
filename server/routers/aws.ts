@@ -94,6 +94,16 @@ function createLexClient(credentials: AWSCredentials) {
 }
 
 export const awsRouter = router({
+  getSession: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.session.credentials) {
+      return null;
+    }
+    return {
+      region: ctx.session.credentials.region,
+      isSSO: ctx.session.credentials.isSSO,
+    };
+  }),
+
   connect: publicProcedure
     .input(connectSchema)
     .mutation(async ({ input, ctx }) => {

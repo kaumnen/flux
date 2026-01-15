@@ -7,20 +7,38 @@ export interface UserInfo {
   region: string;
 }
 
-interface AuthState {
+export interface AuthState {
   isAuthenticated: boolean;
   userInfo: UserInfo | null;
   isSSO: boolean;
-  setAuthenticated: (userInfo: UserInfo, isSSO: boolean) => void;
-  setUnauthenticated: () => void;
+  isHydrated: boolean;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+interface AuthActions {
+  setAuthenticated: (userInfo: UserInfo, isSSO: boolean) => void;
+  setUnauthenticated: () => void;
+  hydrate: (state: Omit<AuthState, "isHydrated"> | null) => void;
+}
+
+export const useAuthStore = create<AuthState & AuthActions>((set) => ({
   isAuthenticated: false,
   userInfo: null,
   isSSO: false,
+  isHydrated: false,
   setAuthenticated: (userInfo, isSSO) =>
     set({ isAuthenticated: true, userInfo, isSSO }),
   setUnauthenticated: () =>
     set({ isAuthenticated: false, userInfo: null, isSSO: false }),
+  hydrate: (state) => {
+    if (state) {
+      set({
+        isAuthenticated: state.isAuthenticated,
+        userInfo: state.userInfo,
+        isSSO: state.isSSO,
+        isHydrated: true,
+      });
+    } else {
+      set({ isHydrated: true });
+    }
+  },
 }));

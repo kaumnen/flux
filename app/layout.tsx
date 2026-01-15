@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppSidebar } from "@/components/AppSidebar";
+import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TRPCProvider } from "@/lib/trpc/provider";
+import { getServerAuthState } from "@/lib/trpc/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,11 +23,13 @@ export const metadata: Metadata = {
   description: "AWS LexV2 helper app",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const authState = await getServerAuthState();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -33,10 +37,12 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <TRPCProvider>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>{children}</SidebarInset>
-            </SidebarProvider>
+            <AuthProvider initialState={authState}>
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>{children}</SidebarInset>
+              </SidebarProvider>
+            </AuthProvider>
           </TRPCProvider>
         </ThemeProvider>
       </body>
