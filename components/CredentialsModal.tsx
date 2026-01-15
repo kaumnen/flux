@@ -53,6 +53,16 @@ interface ParsedCredentials {
   region?: string;
 }
 
+function isValidAccessKeyFormat(key: string): boolean {
+  // AWS access keys are 20 chars, start with AKIA (long-term) or ASIA (temporary)
+  return /^(AKIA|ASIA)[A-Z0-9]{16}$/.test(key);
+}
+
+function isValidSecretKeyFormat(key: string): boolean {
+  // AWS secret keys are 40 characters
+  return /^[A-Za-z0-9/+=]{40}$/.test(key);
+}
+
 function parseCredentials(text: string): ParsedCredentials | null {
   const result: ParsedCredentials = {};
 
@@ -147,8 +157,17 @@ function parseCredentials(text: string): ParsedCredentials | null {
 }
 
 const credentialsSchema = z.object({
-  accessKeyId: z.string().min(1, "Access Key ID is required"),
-  secretAccessKey: z.string().min(1, "Secret Access Key is required"),
+  accessKeyId: z
+    .string()
+    .min(1, "Access Key ID is required")
+    .refine(
+      isValidAccessKeyFormat,
+      "Invalid Access Key ID format (should start with AKIA or ASIA)"
+    ),
+  secretAccessKey: z
+    .string()
+    .min(1, "Secret Access Key is required")
+    .refine(isValidSecretKeyFormat, "Invalid Secret Access Key format"),
   sessionToken: z.string().optional(),
   region: z.string().min(1, "Region is required"),
 });

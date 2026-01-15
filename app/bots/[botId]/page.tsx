@@ -1,4 +1,5 @@
 import { BotDetail } from "@/components/BotDetail";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 interface BotPageProps {
   params: Promise<{ botId: string }>;
@@ -7,5 +8,9 @@ interface BotPageProps {
 export default async function BotPage({ params }: BotPageProps) {
   const { botId } = await params;
 
-  return <BotDetail botId={botId} />;
+  return (
+    <ErrorBoundary>
+      <BotDetail botId={botId} />
+    </ErrorBoundary>
+  );
 }

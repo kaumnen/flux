@@ -360,8 +360,9 @@ export function BotDetail({ botId }: BotDetailProps) {
                 </CardHeader>
                 <CardContent>
                   <ul className="list-disc list-inside space-y-1">
-                    {bot.failureReasons.map((reason) => (
-                      <li key={reason} className="text-sm">
+                    {bot.failureReasons.map((reason, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: static list, no reordering
+                      <li key={`${reason}-${index}`} className="text-sm">
                         {reason}
                       </li>
                     ))}
