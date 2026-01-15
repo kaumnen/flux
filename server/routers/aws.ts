@@ -1,12 +1,16 @@
 import {
+  CreateUploadUrlCommand,
   DescribeBotAliasCommand,
   DescribeBotCommand,
+  DescribeImportCommand,
   LexModelsV2Client,
   ListBotAliasesCommand,
   ListBotLocalesCommand,
   ListBotsCommand,
   ListBotVersionsCommand,
   ListIntentsCommand,
+  ListTestSetsCommand,
+  StartImportCommand,
 } from "@aws-sdk/client-lex-models-v2";
 import {
   LexRuntimeV2Client,
@@ -426,6 +430,116 @@ export const awsRouter = router({
             requestAttributes: response.requestAttributes,
             sessionId: response.sessionId,
           },
+        };
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listTestSets: protectedProcedure.query(async ({ ctx }) => {
+    const lexClient = createLexClient(ctx.credentials);
+
+    try {
+      const response = await lexClient.send(
+        new ListTestSetsCommand({
+          sortBy: { attribute: "LastUpdatedDateTime", order: "Descending" },
+        })
+      );
+      return (
+        response.testSets?.map((testSet) => ({
+          testSetId: testSet.testSetId,
+          testSetName: testSet.testSetName,
+          description: testSet.description,
+          modality: testSet.modality,
+          status: testSet.status,
+          numTurns: testSet.numTurns,
+          creationDateTime: testSet.creationDateTime?.toISOString(),
+          lastUpdatedDateTime: testSet.lastUpdatedDateTime?.toISOString(),
+        })) ?? []
+      );
+    } catch (error) {
+      handleAWSError(error, ctx.credentials.isSSO);
+    }
+  }),
+
+  createUploadUrl: protectedProcedure.mutation(async ({ ctx }) => {
+    const lexClient = createLexClient(ctx.credentials);
+
+    try {
+      const response = await lexClient.send(new CreateUploadUrlCommand({}));
+      return {
+        importId: response.importId,
+        uploadUrl: response.uploadUrl,
+      };
+    } catch (error) {
+      handleAWSError(error, ctx.credentials.isSSO);
+    }
+  }),
+
+  startTestSetImport: protectedProcedure
+    .input(
+      z.object({
+        importId: z.string().min(1),
+        testSetName: z.string().min(1),
+        description: z.string().optional(),
+        roleArn: z.string().min(1),
+        storageLocation: z.object({
+          s3BucketName: z.string().min(1),
+          s3Path: z.string().min(1),
+        }),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new StartImportCommand({
+            importId: input.importId,
+            mergeStrategy: "Overwrite",
+            resourceSpecification: {
+              testSetImportResourceSpecification: {
+                testSetName: input.testSetName,
+                description: input.description,
+                roleArn: input.roleArn,
+                modality: "Text",
+                storageLocation: {
+                  s3BucketName: input.storageLocation.s3BucketName,
+                  s3Path: input.storageLocation.s3Path,
+                },
+                importInputLocation: {
+                  s3BucketName: input.storageLocation.s3BucketName,
+                  s3Path: input.storageLocation.s3Path,
+                },
+              },
+            },
+          })
+        );
+        return {
+          importId: response.importId,
+          importStatus: response.importStatus,
+          creationDateTime: response.creationDateTime?.toISOString(),
+        };
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  describeImport: protectedProcedure
+    .input(z.object({ importId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new DescribeImportCommand({ importId: input.importId })
+        );
+        return {
+          importId: response.importId,
+          importStatus: response.importStatus,
+          failureReasons: response.failureReasons,
+          creationDateTime: response.creationDateTime?.toISOString(),
+          lastUpdatedDateTime: response.lastUpdatedDateTime?.toISOString(),
         };
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);

@@ -1,6 +1,13 @@
 "use client";
 
-import { Bot, ChevronRight, LogOut, Plug, User } from "lucide-react";
+import {
+  Bot,
+  ChevronRight,
+  ClipboardList,
+  LogOut,
+  Plug,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -197,6 +204,26 @@ export function AppSidebar() {
                     );
                   })
                 )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/test-builder"}
+                    tooltip="Create test sets for LexV2 bots"
+                  >
+                    <Link href="/test-builder">
+                      <ClipboardList className="size-4" />
+                      <span>Test Builder</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
