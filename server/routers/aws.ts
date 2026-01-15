@@ -1,13 +1,6 @@
 import {
-  DescribeKeyCommand,
-  KMSClient,
-  ListKeysCommand,
-} from "@aws-sdk/client-kms";
-import {
-  CreateUploadUrlCommand,
   DescribeBotAliasCommand,
   DescribeBotCommand,
-  DescribeImportCommand,
   LexModelsV2Client,
   ListBotAliasesCommand,
   ListBotLocalesCommand,
@@ -15,13 +8,11 @@ import {
   ListBotVersionsCommand,
   ListIntentsCommand,
   ListTestSetsCommand,
-  StartImportCommand,
 } from "@aws-sdk/client-lex-models-v2";
 import {
   LexRuntimeV2Client,
   RecognizeTextCommand,
 } from "@aws-sdk/client-lex-runtime-v2";
-import { ListBucketsCommand, S3Client } from "@aws-sdk/client-s3";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
@@ -112,28 +103,6 @@ function createLexClient(credentials: AWSCredentials) {
 
 function createLexRuntimeClient(credentials: AWSCredentials) {
   return new LexRuntimeV2Client({
-    region: credentials.region,
-    credentials: {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-    },
-  });
-}
-
-function createS3Client(credentials: AWSCredentials) {
-  return new S3Client({
-    region: credentials.region,
-    credentials: {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-    },
-  });
-}
-
-function createKMSClient(credentials: AWSCredentials) {
-  return new KMSClient({
     region: credentials.region,
     credentials: {
       accessKeyId: credentials.accessKeyId,
@@ -485,141 +454,6 @@ export const awsRouter = router({
           lastUpdatedDateTime: testSet.lastUpdatedDateTime?.toISOString(),
         })) ?? []
       );
-    } catch (error) {
-      handleAWSError(error, ctx.credentials.isSSO);
-    }
-  }),
-
-  createUploadUrl: protectedProcedure.mutation(async ({ ctx }) => {
-    const lexClient = createLexClient(ctx.credentials);
-
-    try {
-      const response = await lexClient.send(new CreateUploadUrlCommand({}));
-      return {
-        importId: response.importId,
-        uploadUrl: response.uploadUrl,
-      };
-    } catch (error) {
-      handleAWSError(error, ctx.credentials.isSSO);
-    }
-  }),
-
-  startTestSetImport: protectedProcedure
-    .input(
-      z.object({
-        importId: z.string().min(1),
-        testSetName: z.string().min(1),
-        description: z.string().optional(),
-        roleArn: z.string().min(1),
-        storageLocation: z.object({
-          s3BucketName: z.string().min(1),
-          s3Path: z.string().min(1),
-          kmsKeyArn: z.string().optional(),
-        }),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const lexClient = createLexClient(ctx.credentials);
-
-      try {
-        const response = await lexClient.send(
-          new StartImportCommand({
-            importId: input.importId,
-            mergeStrategy: "Overwrite",
-            resourceSpecification: {
-              testSetImportResourceSpecification: {
-                testSetName: input.testSetName,
-                description: input.description,
-                roleArn: input.roleArn,
-                modality: "Text",
-                storageLocation: {
-                  s3BucketName: input.storageLocation.s3BucketName,
-                  s3Path: input.storageLocation.s3Path,
-                  kmsKeyArn: input.storageLocation.kmsKeyArn,
-                },
-                importInputLocation: {
-                  s3BucketName: input.storageLocation.s3BucketName,
-                  s3Path: input.storageLocation.s3Path,
-                },
-              },
-            },
-          })
-        );
-        return {
-          importId: response.importId,
-          importStatus: response.importStatus,
-          creationDateTime: response.creationDateTime?.toISOString(),
-        };
-      } catch (error) {
-        handleAWSError(error, ctx.credentials.isSSO);
-      }
-    }),
-
-  describeImport: protectedProcedure
-    .input(z.object({ importId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => {
-      const lexClient = createLexClient(ctx.credentials);
-
-      try {
-        const response = await lexClient.send(
-          new DescribeImportCommand({ importId: input.importId })
-        );
-        return {
-          importId: response.importId,
-          importStatus: response.importStatus,
-          failureReasons: response.failureReasons,
-          creationDateTime: response.creationDateTime?.toISOString(),
-          lastUpdatedDateTime: response.lastUpdatedDateTime?.toISOString(),
-        };
-      } catch (error) {
-        handleAWSError(error, ctx.credentials.isSSO);
-      }
-    }),
-
-  listBuckets: protectedProcedure.query(async ({ ctx }) => {
-    const s3Client = createS3Client(ctx.credentials);
-
-    try {
-      const response = await s3Client.send(new ListBucketsCommand({}));
-      return (
-        response.Buckets?.map((bucket) => ({
-          name: bucket.Name,
-          creationDate: bucket.CreationDate?.toISOString(),
-        })) ?? []
-      );
-    } catch (error) {
-      handleAWSError(error, ctx.credentials.isSSO);
-    }
-  }),
-
-  listKmsKeys: protectedProcedure.query(async ({ ctx }) => {
-    const kmsClient = createKMSClient(ctx.credentials);
-
-    try {
-      const listResponse = await kmsClient.send(new ListKeysCommand({}));
-      const keys = listResponse.Keys ?? [];
-
-      const keyDetails = await Promise.all(
-        keys.map(async (key) => {
-          if (!key.KeyId) return null;
-          try {
-            const describeResponse = await kmsClient.send(
-              new DescribeKeyCommand({ KeyId: key.KeyId })
-            );
-            const metadata = describeResponse.KeyMetadata;
-            if (metadata?.KeyState !== "Enabled") return null;
-            return {
-              keyId: metadata.KeyId,
-              keyArn: metadata.Arn,
-              description: metadata.Description,
-            };
-          } catch {
-            return null;
-          }
-        })
-      );
-
-      return keyDetails.filter((k): k is NonNullable<typeof k> => k !== null);
     } catch (error) {
       handleAWSError(error, ctx.credentials.isSSO);
     }

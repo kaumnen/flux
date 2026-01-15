@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Bot,
-  Download,
-  MessageSquare,
-  Plus,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Bot, Download, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadCSV } from "@/lib/test-export";
+import { isTestSetComplete } from "@/lib/test-validation";
 import { TestConversationEditor } from "./TestConversationEditor";
-import { TestUploadDialog } from "./TestUploadDialog";
 import type { TestConversation, TestSet } from "./test-builder-types";
 
 function generateId(): string {
@@ -49,7 +42,6 @@ export function TestBuilder() {
     description: "",
     conversations: [],
   });
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const handleAddConversation = () => {
     setTestSet((prev) => ({
@@ -84,9 +76,8 @@ export function TestBuilder() {
     downloadCSV(testSet);
   };
 
-  const isExportDisabled = testSet.conversations.length === 0;
-  const isUploadDisabled =
-    !testSet.name.trim() || testSet.conversations.length === 0;
+  const isDataComplete = isTestSetComplete(testSet);
+  const isExportDisabled = !isDataComplete;
 
   return (
     <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -109,21 +100,8 @@ export function TestBuilder() {
             <Download className="size-4 mr-2" />
             Export CSV
           </Button>
-          <Button
-            disabled={isUploadDisabled}
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            <Upload className="size-4 mr-2" />
-            Upload to LexV2
-          </Button>
         </div>
       </div>
-
-      <TestUploadDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        testSet={testSet}
-      />
 
       {/* Test Set Metadata */}
       <Card>
