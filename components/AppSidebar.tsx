@@ -1,10 +1,15 @@
 "use client";
 
-import { Bot, LogOut, Plug, User } from "lucide-react";
+import { Bot, ChevronRight, LogOut, Plug, User } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +22,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSkeleton,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
@@ -27,6 +35,7 @@ export function AppSidebar() {
   const [credentialsModalOpen, setCredentialsModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | undefined>();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   const { isAuthenticated, userInfo, isHydrated, setUnauthenticated } =
@@ -127,20 +136,63 @@ export function AppSidebar() {
                     </div>
                   </SidebarMenuItem>
                 ) : (
-                  botsQuery.data?.map((bot) => (
-                    <SidebarMenuItem key={bot.botId}>
-                      <SidebarMenuButton
+                  botsQuery.data?.map((bot) => {
+                    const isSelected = pathname?.startsWith(
+                      `/bots/${bot.botId}`
+                    );
+                    const currentTab = searchParams.get("tab") || "overview";
+                    const isOverview =
+                      pathname === `/bots/${bot.botId}` &&
+                      currentTab === "overview";
+                    const isChat =
+                      pathname === `/bots/${bot.botId}` &&
+                      currentTab === "chat";
+
+                    return (
+                      <Collapsible
+                        key={bot.botId}
                         asChild
-                        isActive={pathname === `/bots/${bot.botId}`}
-                        tooltip={bot.description || bot.botName}
+                        defaultOpen={isSelected}
+                        className="group/collapsible"
                       >
-                        <Link href={`/bots/${bot.botId}`}>
-                          <Bot className="size-4" />
-                          <span>{bot.botName}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))
+                        <SidebarMenuItem>
+                          <CollapsibleTrigger asChild>
+                            <SidebarMenuButton
+                              tooltip={bot.description || bot.botName}
+                              isActive={isSelected}
+                            >
+                              <Bot className="size-4" />
+                              <span>{bot.botName}</span>
+                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                            </SidebarMenuButton>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <SidebarMenuSub>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={isOverview}
+                                >
+                                  <Link
+                                    href={`/bots/${bot.botId}?tab=overview`}
+                                  >
+                                    <span>Overview</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                              <SidebarMenuSubItem>
+                                <SidebarMenuSubButton asChild isActive={isChat}>
+                                  <Link href={`/bots/${bot.botId}?tab=chat`}>
+                                    <span>Chat & Debug</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            </SidebarMenuSub>
+                          </CollapsibleContent>
+                        </SidebarMenuItem>
+                      </Collapsible>
+                    );
+                  })
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
