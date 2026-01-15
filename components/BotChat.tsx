@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageSquare, RefreshCw, Send } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,6 +24,7 @@ interface BotChatProps {
   setMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   selectedMessageId: string | null;
   onSelectMessage: (id: string | null) => void;
+  hoveredMessageId?: string | null;
 }
 
 function generateSessionId(): string {
@@ -36,6 +37,7 @@ export function BotChat({
   setMessages,
   selectedMessageId,
   onSelectMessage,
+  hoveredMessageId,
 }: BotChatProps) {
   const { isAuthenticated } = useAuthStore();
   const [sessionId, setSessionId] = useState(() => generateSessionId());
@@ -43,6 +45,7 @@ export function BotChat({
   const [selectedLocale, setSelectedLocale] = useState<string>("");
   const [inputValue, setInputValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const aliasesQuery = trpc.aws.listBotAliases.useQuery(
     { botId },
@@ -100,6 +103,34 @@ export function BotChat({
     );
     if (viewport) {
       viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, [messages]);
+
+  const interactionMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let count = 0;
+    messages.forEach((msg, idx) => {
+      if (msg.role === "bot" && (msg.rawRequest || msg.rawResponse)) {
+        count++;
+        map.set(msg.id, count);
+        // Associate preceding user message
+        const prev = messages[idx - 1];
+        if (prev?.role === "user") {
+          map.set(prev.id, count);
+        }
+      }
+    });
+    return map;
+  }, [messages]);
+
+  const hoveredInteractionNum = hoveredMessageId
+    ? interactionMap.get(hoveredMessageId)
+    : null;
+
+  // Focus input when bot response is received
+  useEffect(() => {
+    if (messages.length > 0 && messages[messages.length - 1].role === "bot") {
+      inputRef.current?.focus();
     }
   }, [messages]);
 
@@ -243,26 +274,58 @@ export function BotChat({
               <p className="text-sm">Send a message to start chatting</p>
             </div>
           ) : (
-            messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    message.role === "bot" && onSelectMessage(message.id)
-                  }
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm text-left transition-colors ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : `bg-muted cursor-pointer hover:bg-muted/80 ${selectedMessageId === message.id ? "ring-2 ring-primary" : ""}`
-                  }`}
+            messages.map((message) => {
+              const interactionNum = interactionMap.get(message.id);
+              const isHighlighted =
+                interactionNum !== undefined &&
+                interactionNum === hoveredInteractionNum;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  } relative group`}
                 >
-                  {message.content}
-                </button>
-              </div>
-            ))
+                  {interactionNum && (
+                    <div
+                      className={`absolute top-1/2 -translate-y-1/2 text-xs font-mono text-muted-foreground transition-opacity ${
+                        message.role === "user" ? "-left-8" : "-right-8"
+                      } ${
+                        isHighlighted
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-50"
+                      }`}
+                    >
+                      #{interactionNum}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      message.role === "bot" && onSelectMessage(message.id)
+                    }
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm text-left transition-all duration-200 ${
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted cursor-pointer hover:bg-muted/80"
+                    } ${
+                      isHighlighted
+                        ? `ring-2 scale-[1.02] shadow-lg ${
+                            message.role === "user"
+                              ? "ring-primary ring-offset-2 ring-offset-background"
+                              : "ring-primary"
+                          }`
+                        : selectedMessageId === message.id
+                          ? "ring-2 ring-primary/50"
+                          : ""
+                    }`}
+                  >
+                    {message.content}
+                  </button>
+                </div>
+              );
+            })
           )}
           {recognizeTextMutation.isPending && (
             <div className="flex justify-start">
@@ -287,6 +350,7 @@ export function BotChat({
           className="flex gap-2"
         >
           <Input
+            ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Type a message..."

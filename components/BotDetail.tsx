@@ -108,6 +108,7 @@ export function BotDetail({ botId }: BotDetailProps) {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null
   );
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
   const selectedMessage =
     messages.find((m) => m.id === selectedMessageId) || null;
@@ -373,7 +374,12 @@ export function BotDetail({ botId }: BotDetailProps) {
           </TabsContent>
 
           <TabsContent value="debug" className="flex-1 overflow-hidden m-0">
-            <BotDebugInfo selectedMessage={selectedMessage} />
+            <BotDebugInfo
+              selectedMessage={selectedMessage}
+              messages={messages}
+              onSelectMessage={setSelectedMessageId}
+              onHoverMessage={setHoveredMessageId}
+            />
           </TabsContent>
         </Tabs>
       </ResizablePanel>
@@ -385,6 +391,7 @@ export function BotDetail({ botId }: BotDetailProps) {
           setMessages={setMessages}
           selectedMessageId={selectedMessageId}
           onSelectMessage={setSelectedMessageId}
+          hoveredMessageId={hoveredMessageId}
         />
       </ResizablePanel>
     </ResizablePanelGroup>
