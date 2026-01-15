@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { BotChat } from "@/components/BotChat";
 import { BotDebugInfo } from "@/components/BotDebugInfo";
+import type { ChatMessage } from "@/components/bot-types";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import type { ChatMessage } from "@/components/bot-types";
 
 interface BotChatViewProps {
   botId: string;
