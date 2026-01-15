@@ -230,9 +230,15 @@ export function BotChat({
         <div className="flex items-center gap-2">
           <MessageSquare className="size-4" />
           <span className="font-semibold text-sm">Chat Preview</span>
+          <span className="text-xs text-muted-foreground">Session</span>
         </div>
 
-        <Button variant="ghost" size="sm" onClick={handleResetSession}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleResetSession}
+          aria-label="Reset chat session"
+        >
           <RefreshCw className="size-4 mr-1" />
           Reset Session
         </Button>
@@ -240,9 +246,10 @@ export function BotChat({
 
       <div className="flex items-center gap-2 p-4 border-b bg-muted/20">
         <Select value={selectedAliasId} onValueChange={setSelectedAliasId}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-40" aria-label="Select bot alias">
             <SelectValue placeholder="Select alias" />
           </SelectTrigger>
+
           <SelectContent>
             {aliasesQuery.data?.map((alias) => (
               <SelectItem key={alias.botAliasId} value={alias.botAliasId ?? ""}>
@@ -253,7 +260,7 @@ export function BotChat({
         </Select>
 
         <Select value={selectedLocale} onValueChange={setSelectedLocale}>
-          <SelectTrigger className="w-32">
+          <SelectTrigger className="w-32" aria-label="Select locale">
             <SelectValue placeholder="Locale" />
           </SelectTrigger>
           <SelectContent>
@@ -272,6 +279,7 @@ export function BotChat({
             <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
               <MessageSquare className="size-8 mb-2" />
               <p className="text-sm">Send a message to start chatting</p>
+              <p className="text-xs">Bot responses appear on the right</p>
             </div>
           ) : (
             messages.map((message) => {
@@ -320,6 +328,11 @@ export function BotChat({
                           ? "ring-2 ring-primary/50"
                           : ""
                     }`}
+                    aria-label={
+                      message.role === "bot"
+                        ? "Select message for debug details"
+                        : "User message"
+                    }
                   >
                     {message.content}
                   </button>
@@ -354,6 +367,7 @@ export function BotChat({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Type a message..."
+            aria-label="Chat message"
             disabled={
               !selectedAliasId ||
               !selectedLocale ||
@@ -362,6 +376,7 @@ export function BotChat({
           />
           <Button
             type="submit"
+            aria-label="Send message"
             disabled={
               !inputValue.trim() ||
               !selectedAliasId ||

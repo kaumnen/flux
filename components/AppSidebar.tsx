@@ -84,6 +84,9 @@ export function AppSidebar() {
             </div>
             <ThemeToggle />
           </div>
+          <div className="px-2 text-xs text-muted-foreground">
+            Amazon Lex V2 helper
+          </div>
           {isAuthenticated && userInfo && (
             <div className="px-2 text-xs text-muted-foreground">
               {userInfo.region}
@@ -126,7 +129,7 @@ export function AppSidebar() {
                 ) : !isAuthenticated ? (
                   <SidebarMenuItem>
                     <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                      Connect to AWS to view bots
+                      Connect your AWS account to view bots
                     </div>
                   </SidebarMenuItem>
                 ) : botsQuery.data?.length === 0 ? (
@@ -236,16 +239,21 @@ export function AppSidebar() {
               </Button>
             </div>
           ) : (
-            <Button
-              className="w-full"
-              onClick={() => {
-                setAuthError(undefined);
-                setCredentialsModalOpen(true);
-              }}
-            >
-              <Plug className="size-4 mr-2" />
-              Connect to AWS
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="w-full"
+                onClick={() => {
+                  setAuthError(undefined);
+                  setCredentialsModalOpen(true);
+                }}
+              >
+                <Plug className="size-4 mr-2" />
+                Connect to AWS
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Use credentials with Lex V2 access
+              </p>
+            </div>
           )}
         </SidebarFooter>
       </Sidebar>

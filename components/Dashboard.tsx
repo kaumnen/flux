@@ -26,7 +26,7 @@ function StatusBadge({ status }: { status?: string }) {
 }
 
 export function Dashboard() {
-  const { isAuthenticated, isHydrated } = useAuthStore();
+  const { isAuthenticated, isHydrated, userInfo } = useAuthStore();
 
   const botsQuery = trpc.aws.listBots.useQuery(undefined, {
     enabled: isAuthenticated && isHydrated,
@@ -100,11 +100,11 @@ export function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Regions</CardTitle>
+            <CardTitle className="text-sm font-medium">Region</CardTitle>
             <Layers className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold">{userInfo?.region ?? "—"}</div>
             <p className="text-xs text-muted-foreground">
               Current session region
             </p>
@@ -124,7 +124,11 @@ export function Dashboard() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {bots.map((bot) => (
-              <Link key={bot.botId} href={`/bots/${bot.botId}?tab=overview`}>
+              <Link
+                key={bot.botId}
+                href={`/bots/${bot.botId}?tab=overview`}
+                aria-label={`Open bot ${bot.botName}`}
+              >
                 <Card className="h-full hover:bg-muted/50 transition-colors cursor-pointer">
                   <CardHeader>
                     <div className="flex items-start justify-between">

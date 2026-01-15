@@ -1,6 +1,8 @@
-import { Settings2 } from "lucide-react";
+import { Check, Copy, Settings2 } from "lucide-react";
+import { useState } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChatMessage } from "./bot-types";
@@ -10,6 +12,27 @@ interface BotDebugInfoProps {
   messages: ChatMessage[];
   onSelectMessage: (id: string | null) => void;
   onHoverMessage?: (id: string | null) => void;
+}
+
+function CopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-7 px-2 text-xs"
+      onClick={async () => {
+        await navigator.clipboard.writeText(value);
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      }}
+      aria-label={label}
+    >
+      {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+      <span className="ml-1">{copied ? "Copied" : "Copy"}</span>
+    </Button>
+  );
 }
 
 export function BotDebugInfo({
@@ -172,10 +195,16 @@ export function BotDebugInfo({
               {selectedMessage ? (
                 selectedMessage.rawRequest || selectedMessage.rawResponse ? (
                   <div className="flex flex-col h-full">
-                    <div className="flex items-center justify-between pb-4 border-b mb-4 shrink-0">
-                      <h3 className="font-semibold truncate max-w-[400px]">
-                        {selectedMessage.content}
-                      </h3>
+                    <div className="flex flex-col gap-2 pb-4 border-b mb-4 shrink-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold truncate max-w-[400px]">
+                          {selectedMessage.content}
+                        </h3>
+                        <CopyButton
+                          value={selectedMessage.id}
+                          label="Copy message ID"
+                        />
+                      </div>
                       <span className="text-xs text-muted-foreground font-mono">
                         {selectedMessage.id}
                       </span>
@@ -209,6 +238,16 @@ export function BotDebugInfo({
                         >
                           <Card className="h-full flex flex-col">
                             <CardContent className="p-0 flex-1 overflow-hidden">
+                              <div className="flex items-center justify-end px-2 py-1 border-b bg-muted/30">
+                                <CopyButton
+                                  value={JSON.stringify(
+                                    selectedMessage.rawRequest,
+                                    null,
+                                    2
+                                  )}
+                                  label="Copy raw request"
+                                />
+                              </div>
                               <div className="text-xs h-full overflow-auto">
                                 <SyntaxHighlighter
                                   language="json"
@@ -238,6 +277,16 @@ export function BotDebugInfo({
                         >
                           <Card className="h-full flex flex-col">
                             <CardContent className="p-0 flex-1 overflow-hidden">
+                              <div className="flex items-center justify-end px-2 py-1 border-b bg-muted/30">
+                                <CopyButton
+                                  value={JSON.stringify(
+                                    selectedMessage.rawResponse,
+                                    null,
+                                    2
+                                  )}
+                                  label="Copy raw response"
+                                />
+                              </div>
                               <div className="text-xs h-full overflow-auto">
                                 <SyntaxHighlighter
                                   language="json"
@@ -501,6 +550,12 @@ function OtherInfoSection({
               Session State
             </span>
             <div className="text-xs rounded-md overflow-auto">
+              <div className="flex items-center justify-end px-2 py-1 border-b bg-muted/30">
+                <CopyButton
+                  value={JSON.stringify(otherState, null, 2)}
+                  label="Copy session state JSON"
+                />
+              </div>
               <SyntaxHighlighter
                 language="json"
                 style={vscDarkPlus}
