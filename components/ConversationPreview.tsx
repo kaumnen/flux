@@ -160,14 +160,14 @@ function TurnBubble({ turn, index }: TurnBubbleProps) {
       {/* Bubble content */}
       <div
         className={cn(
-          "flex-1 max-w-[calc(50%-2rem)]",
+          "max-w-[calc(50%_-_3rem)] min-w-0 overflow-hidden",
           isUser ? "text-right" : "text-left"
         )}
       >
         {/* Message bubble */}
         <div
           className={cn(
-            "inline-block px-3 py-2 rounded-xl text-sm transition-all",
+            "inline-block px-3 py-2 rounded-xl text-sm transition-all break-words break-all whitespace-pre-wrap text-left",
             isUser
               ? "bg-gradient-to-br from-primary/10 to-primary/5 text-foreground rounded-tr-sm"
               : "bg-muted/80 text-foreground/90 rounded-tl-sm",

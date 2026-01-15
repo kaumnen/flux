@@ -2,11 +2,11 @@
 
 import { AlertCircle, Bot, Plus, Trash2, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import type {
   AgentTestTurn,
   TestConversation,
@@ -179,10 +179,11 @@ function UserTurnEditor({ turn, onChange }: UserTurnEditorProps) {
     <div className="space-y-3">
       <div className="space-y-1">
         <Label className="text-xs">User Utterance</Label>
-        <Input
+        <Textarea
           placeholder="What the user says..."
           value={turn.utterance}
           onChange={(e) => onChange({ ...turn, utterance: e.target.value })}
+          className="min-h-[2.5rem] break-all whitespace-pre-wrap"
         />
       </div>
       <div className="space-y-1">
@@ -252,6 +253,7 @@ function AgentTurnEditor({ turn, onChange }: AgentTurnEditorProps) {
           onChange({ ...turn, expectedResponse: e.target.value })
         }
         rows={2}
+        className="break-all whitespace-pre-wrap"
       />
     </div>
   );
