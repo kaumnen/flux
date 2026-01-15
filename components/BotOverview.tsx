@@ -35,6 +35,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 
@@ -44,9 +52,13 @@ interface BotOverviewProps {
 
 function StatusBadge({ status }: { status?: string }) {
   const variant =
-    status === "Available"
+    status === "Available" ||
+    status === "Built" ||
+    status === "ReadyExpressTesting"
       ? "default"
-      : status === "Creating" || status === "Versioning"
+      : status === "Creating" ||
+          status === "Versioning" ||
+          status === "Building"
         ? "secondary"
         : "destructive";
 
@@ -423,6 +435,7 @@ interface LocaleItemProps {
     localeName?: string;
     botLocaleStatus?: string;
     description?: string;
+    lastBuildSubmittedDateTime?: string;
   };
 }
 
@@ -445,7 +458,17 @@ function LocaleItem({ botId, botVersion, locale }: LocaleItemProps) {
               {locale.localeId}
             </span>
           </div>
-          <StatusBadge status={locale.botLocaleStatus} />
+          <div className="flex items-center gap-4">
+            {locale.lastBuildSubmittedDateTime && (
+              <div className="text-xs text-muted-foreground text-right hidden sm:block">
+                <span className="block font-medium">Last built</span>
+                <span className="block">
+                  {formatDateTime(locale.lastBuildSubmittedDateTime)}
+                </span>
+              </div>
+            )}
+            <StatusBadge status={locale.botLocaleStatus} />
+          </div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="px-4 pb-4">
@@ -464,31 +487,40 @@ function LocaleItem({ botId, botVersion, locale }: LocaleItemProps) {
               <MessageSquare className="size-3" />
               Intents ({intentsQuery.data?.length})
             </h4>
-            <div className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {intentsQuery.data?.map((intent) => (
-                <Card
-                  key={intent.intentId}
-                  className="shadow-sm border bg-card/50 hover:bg-card transition-colors flex flex-col justify-center text-center"
-                >
-                  <CardContent className="p-2 space-y-1">
-                    <div
-                      className="font-medium text-xs w-full truncate"
-                      title={intent.intentName}
-                    >
-                      {intent.intentName}
-                    </div>
-                    {intent.description ? (
-                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
-                        {intent.description}
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-muted-foreground italic opacity-50">
-                        No description
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">#</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Last Edited</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {intentsQuery.data?.map((intent, index) => (
+                    <TableRow key={intent.intentId}>
+                      <TableCell className="font-medium">{index + 1}</TableCell>
+                      <TableCell>{intent.intentName}</TableCell>
+                      <TableCell
+                        className="max-w-[300px] truncate"
+                        title={intent.description ?? ""}
+                      >
+                        {intent.description || (
+                          <span className="text-muted-foreground italic opacity-50">
+                            No description
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DateTimeDisplay
+                          dateString={intent.lastUpdatedDateTime}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

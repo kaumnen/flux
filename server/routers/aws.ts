@@ -302,6 +302,8 @@ export const awsRouter = router({
             description: locale.description,
             botLocaleStatus: locale.botLocaleStatus,
             lastUpdatedDateTime: locale.lastUpdatedDateTime?.toISOString(),
+            lastBuildSubmittedDateTime:
+              locale.lastBuildSubmittedDateTime?.toISOString(),
           })) ?? []
         );
       } catch (error) {
