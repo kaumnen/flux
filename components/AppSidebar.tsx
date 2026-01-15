@@ -36,6 +36,7 @@ import {
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 import { CredentialsModal } from "./CredentialsModal";
+import { RegionSelector } from "./RegionSelector";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function AppSidebar() {
@@ -95,8 +96,8 @@ export function AppSidebar() {
             Amazon Lex V2 helper
           </div>
           {isAuthenticated && userInfo && (
-            <div className="px-2 text-xs text-muted-foreground">
-              {userInfo.region}
+            <div className="px-2">
+              <RegionSelector />
             </div>
           )}
         </SidebarHeader>

@@ -23,28 +23,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  LEX_REGION_VALUES,
+  LEX_REGIONS,
+  type LexRegion,
+} from "@/lib/constants/regions";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
-
-const LEX_REGIONS = [
-  { value: "us-east-1", label: "US East (N. Virginia)" },
-  { value: "us-west-2", label: "US West (Oregon)" },
-  { value: "eu-west-1", label: "Europe (Ireland)" },
-  { value: "eu-west-2", label: "Europe (London)" },
-  { value: "eu-central-1", label: "Europe (Frankfurt)" },
-  { value: "ap-southeast-1", label: "Asia Pacific (Singapore)" },
-  { value: "ap-southeast-2", label: "Asia Pacific (Sydney)" },
-  { value: "ap-northeast-1", label: "Asia Pacific (Tokyo)" },
-  { value: "ap-northeast-2", label: "Asia Pacific (Seoul)" },
-  { value: "ca-central-1", label: "Canada (Central)" },
-  { value: "af-south-1", label: "Africa (Cape Town)" },
-] as const;
-
-type RegionValue = (typeof LEX_REGIONS)[number]["value"];
-const REGION_VALUES = LEX_REGIONS.map((region) => region.value) as [
-  RegionValue,
-  ...RegionValue[],
-];
 
 interface ParsedCredentials {
   accessKeyId?: string;
@@ -169,7 +154,7 @@ const credentialsSchema = z.object({
     .min(1, "Secret Access Key is required")
     .refine(isValidSecretKeyFormat, "Invalid Secret Access Key format"),
   sessionToken: z.string().optional(),
-  region: z.enum(REGION_VALUES),
+  region: z.enum(LEX_REGION_VALUES),
 });
 
 type CredentialsFormData = z.infer<typeof credentialsSchema>;
@@ -275,10 +260,10 @@ export function CredentialsModal({
       }
       if (parsed.region) {
         const isValidParsedRegion = (
-          REGION_VALUES as readonly string[]
+          LEX_REGION_VALUES as readonly string[]
         ).includes(parsed.region);
         if (isValidParsedRegion) {
-          setValue("region", parsed.region as RegionValue);
+          setValue("region", parsed.region as LexRegion);
           found.push("Region");
         }
       }
@@ -393,8 +378,8 @@ $Env:AWS_SECRET_ACCESS_KEY="..."`}
             <Select
               value={selectedRegion}
               onValueChange={(value) => {
-                if ((REGION_VALUES as readonly string[]).includes(value)) {
-                  setValue("region", value as RegionValue);
+                if ((LEX_REGION_VALUES as readonly string[]).includes(value)) {
+                  setValue("region", value as LexRegion);
                 }
               }}
             >
