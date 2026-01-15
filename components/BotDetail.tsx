@@ -10,6 +10,7 @@ import {
   Shield,
   Tag,
 } from "lucide-react";
+import { useState } from "react";
 import { BotChat } from "@/components/BotChat";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,17 +20,11 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
+import { BotDebugInfo } from "./BotDebugInfo";
+import type { ChatMessage } from "./bot-types";
 
 interface BotDetailProps {
   botId: string;
@@ -88,11 +83,17 @@ function formatDuration(seconds?: number) {
   return `${hours}h ${remainingMinutes}m`;
 }
 
-function DateTimeDisplay({ dateString }: { dateString?: string }) {
-  if (!dateString) return <span>N/A</span>;
+function DateTimeDisplay({
+  dateString,
+  className,
+}: {
+  dateString?: string;
+  className?: string;
+}) {
+  if (!dateString) return <span className={className}>N/A</span>;
 
   return (
-    <div className="flex flex-col">
+    <div className={`flex flex-col ${className}`}>
       <span>{formatRelativeTime(dateString)}</span>
       <span className="text-xs text-muted-foreground">
         {formatDateTime(dateString)}
@@ -103,6 +104,13 @@ function DateTimeDisplay({ dateString }: { dateString?: string }) {
 
 export function BotDetail({ botId }: BotDetailProps) {
   const { isAuthenticated } = useAuthStore();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null
+  );
+
+  const selectedMessage =
+    messages.find((m) => m.id === selectedMessageId) || null;
 
   const botQuery = trpc.aws.describeBot.useQuery(
     { botId },
@@ -145,273 +153,239 @@ export function BotDetail({ botId }: BotDetailProps) {
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <ResizablePanel defaultSize={40} minSize={25}>
-        <div className="flex flex-col gap-6 p-6 h-full overflow-auto">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Bot className="size-8" />
-              <div>
-                <h1 className="text-2xl font-semibold">{bot.botName}</h1>
-                {bot.description && (
-                  <p className="text-muted-foreground">{bot.description}</p>
-                )}
-              </div>
-            </div>
-            <StatusBadge status={bot.botStatus} />
+        <Tabs defaultValue="info" className="flex flex-col h-full">
+          <div className="px-4 py-2 border-b bg-muted/10">
+            <TabsList className="w-full">
+              <TabsTrigger value="info" className="flex-1">
+                Bot Info
+              </TabsTrigger>
+              <TabsTrigger value="debug" className="flex-1">
+                Logs & Debug
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          <Tabs defaultValue="simple">
-            <TabsList>
-              <TabsTrigger value="simple">Simple</TabsTrigger>
-              <TabsTrigger value="aliases">Aliases</TabsTrigger>
-              <TabsTrigger value="versions">Versions</TabsTrigger>
-              <TabsTrigger value="advanced">Advanced</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="simple" className="mt-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Bot ID
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-mono text-sm">{bot.botId}</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Bot Type
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>{bot.botType ?? "Standard"}</p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Calendar className="size-4" />
-                      Created
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DateTimeDisplay dateString={bot.creationDateTime} />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Clock className="size-4" />
-                      Last Updated
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <DateTimeDisplay dateString={bot.lastUpdatedDateTime} />
-                  </CardContent>
-                </Card>
+          <TabsContent
+            value="info"
+            className="flex-1 overflow-auto p-6 m-0 space-y-6"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <Bot className="size-8" />
+                <div>
+                  <h1 className="text-2xl font-semibold">{bot.botName}</h1>
+                  {bot.description && (
+                    <p className="text-muted-foreground">{bot.description}</p>
+                  )}
+                </div>
               </div>
-            </TabsContent>
+              <StatusBadge status={bot.botStatus} />
+            </div>
 
-            <TabsContent value="aliases" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Tag className="size-4" />
-                    Bot Aliases
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {aliasesQuery.isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ) : aliasesQuery.data?.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No aliases found
-                    </p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Alias Name</TableHead>
-                          <TableHead>Version</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Lambda</TableHead>
-                          <TableHead>Updated</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {aliasesQuery.data?.map((alias) => (
-                          <AliasRow
-                            key={alias.botAliasId}
-                            botId={botId}
-                            alias={alias}
+            {/* Basic Info */}
+            <Card>
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Bot ID</span>
+                  <span className="font-mono text-sm">{bot.botId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <span className="text-sm">{bot.botType ?? "Standard"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Calendar className="size-3" />
+                    Created
+                  </span>
+                  <DateTimeDisplay
+                    dateString={bot.creationDateTime}
+                    className="text-right"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="size-3" />
+                    Updated
+                  </span>
+                  <DateTimeDisplay
+                    dateString={bot.lastUpdatedDateTime}
+                    className="text-right"
+                  />
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Clock className="size-3" />
+                    Session Timeout
+                  </span>
+                  <span className="text-sm">
+                    {formatDuration(bot.idleSessionTTLInSeconds)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Shield className="size-3" />
+                    Data Privacy
+                  </span>
+                  <span className="text-sm">
+                    {bot.dataPrivacy?.childDirected
+                      ? "Child-directed"
+                      : "Not child-directed"}
+                  </span>
+                </div>
+                <div className="pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    IAM Role
+                  </span>
+                  <p className="font-mono text-xs break-all mt-1">
+                    {bot.roleArn ?? "N/A"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Aliases */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Tag className="size-4" />
+                  Aliases
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {aliasesQuery.isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : aliasesQuery.data?.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    No aliases found
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {aliasesQuery.data?.map((alias) => (
+                      <AliasItem
+                        key={alias.botAliasId}
+                        botId={botId}
+                        alias={alias}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Versions */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <GitBranch className="size-4" />
+                  Versions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {versionsQuery.isLoading ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : versionsQuery.data?.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    No versions found
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {versionsQuery.data?.map((version) => (
+                      <div
+                        key={version.botVersion}
+                        className="p-3 rounded-md border bg-muted/30"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-medium">
+                            {version.botVersion}
+                          </span>
+                          <StatusBadge status={version.botStatus} />
+                        </div>
+                        {version.description && (
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {version.description}
+                          </p>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-2">
+                          <DateTimeDisplay
+                            dateString={version.creationDateTime}
                           />
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            <TabsContent value="versions" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <GitBranch className="size-4" />
-                    Bot Versions
+            {/* Failure Reasons */}
+            {bot.failureReasons && bot.failureReasons.length > 0 && (
+              <Card className="border-destructive">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
+                    <AlertCircle className="size-4" />
+                    Failure Reasons
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {versionsQuery.isLoading ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ) : versionsQuery.data?.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No versions found
-                    </p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Version</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Created</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {versionsQuery.data?.map((version) => (
-                          <TableRow key={version.botVersion}>
-                            <TableCell className="font-mono">
-                              {version.botVersion}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={version.botStatus} />
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {version.description || "-"}
-                            </TableCell>
-                            <TableCell>
-                              <DateTimeDisplay
-                                dateString={version.creationDateTime}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
+                  <ul className="list-disc list-inside space-y-1">
+                    {bot.failureReasons.map((reason, index) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: static list
+                      <li key={`${reason}-${index}`} className="text-sm">
+                        {reason}
+                      </li>
+                    ))}
+                  </ul>
                 </CardContent>
               </Card>
-            </TabsContent>
+            )}
 
-            <TabsContent value="advanced" className="mt-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Clock className="size-4" />
-                      Idle Session Timeout
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>{formatDuration(bot.idleSessionTTLInSeconds)}</p>
-                  </CardContent>
-                </Card>
+            {/* Bot Members */}
+            {bot.botMembers && bot.botMembers.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Bot Members
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {bot.botMembers.map((member) => (
+                      <li
+                        key={member.botMemberId}
+                        className="flex items-center gap-2"
+                      >
+                        <Bot className="size-4" />
+                        <span>{member.botMemberName}</span>
+                        <span className="text-muted-foreground text-sm">
+                          ({member.botMemberId})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Shield className="size-4" />
-                      Data Privacy
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p>
-                      {bot.dataPrivacy?.childDirected
-                        ? "COPPA compliant (child-directed)"
-                        : "Not child-directed"}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="md:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      IAM Role ARN
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="font-mono text-sm break-all">
-                      {bot.roleArn ?? "N/A"}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {bot.failureReasons && bot.failureReasons.length > 0 && (
-                  <Card className="md:col-span-2 border-destructive">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-destructive flex items-center gap-2">
-                        <AlertCircle className="size-4" />
-                        Failure Reasons
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="list-disc list-inside space-y-1">
-                        {bot.failureReasons.map((reason, index) => (
-                          // biome-ignore lint/suspicious/noArrayIndexKey: static list, no reordering
-                          <li key={`${reason}-${index}`} className="text-sm">
-                            {reason}
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {bot.botMembers && bot.botMembers.length > 0 && (
-                  <Card className="md:col-span-2">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Bot Members
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {bot.botMembers.map((member) => (
-                          <li
-                            key={member.botMemberId}
-                            className="flex items-center gap-2"
-                          >
-                            <Bot className="size-4" />
-                            <span>{member.botMemberName}</span>
-                            <span className="text-muted-foreground text-sm">
-                              ({member.botMemberId})
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+          <TabsContent value="debug" className="flex-1 overflow-hidden m-0">
+            <BotDebugInfo selectedMessage={selectedMessage} />
+          </TabsContent>
+        </Tabs>
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={60} minSize={30}>
-        <BotChat botId={botId} />
+        <BotChat
+          botId={botId}
+          messages={messages}
+          setMessages={setMessages}
+          selectedMessageId={selectedMessageId}
+          onSelectMessage={setSelectedMessageId}
+        />
       </ResizablePanel>
     </ResizablePanelGroup>
   );
@@ -428,7 +402,7 @@ interface AliasRowProps {
   };
 }
 
-function AliasRow({ botId, alias }: AliasRowProps) {
+function AliasItem({ botId, alias }: AliasRowProps) {
   const { isAuthenticated } = useAuthStore();
 
   const aliasDetailQuery = trpc.aws.describeBotAlias.useQuery(
@@ -440,40 +414,43 @@ function AliasRow({ botId, alias }: AliasRowProps) {
   const hasLambda = lambdaArns && Object.values(lambdaArns).some(Boolean);
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">{alias.botAliasName}</TableCell>
-      <TableCell className="font-mono">{alias.botVersion || "-"}</TableCell>
-      <TableCell>
+    <div className="p-3 rounded-md border bg-muted/30">
+      <div className="flex items-center justify-between">
+        <span className="font-medium">{alias.botAliasName}</span>
         <StatusBadge status={alias.botAliasStatus} />
-      </TableCell>
-      <TableCell>
-        {aliasDetailQuery.isLoading ? (
-          <Skeleton className="h-4 w-24" />
-        ) : hasLambda ? (
-          <div className="flex flex-col gap-1">
-            {Object.entries(lambdaArns).map(
-              ([locale, arn]) =>
-                arn && (
-                  <div key={locale} className="flex items-center gap-1">
-                    <Code className="size-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {locale}:
-                    </span>
-                    <span className="font-mono text-xs truncate max-w-48">
-                      {arn.split(":").pop()}
-                    </span>
-                  </div>
-                )
-            )}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
-      </TableCell>
-      <TableCell>
+      </div>
+      <div className="text-sm text-muted-foreground mt-1">
+        Version: <span className="font-mono">{alias.botVersion || "-"}</span>
+      </div>
+      {aliasDetailQuery.isLoading ? (
+        <Skeleton className="h-4 w-32 mt-2" />
+      ) : hasLambda ? (
+        <div className="mt-2 space-y-1">
+          {Object.entries(lambdaArns).map(
+            ([locale, arn]) =>
+              arn && (
+                <div key={locale} className="flex items-center gap-1">
+                  <Code className="size-3 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">
+                    {locale}:
+                  </span>
+                  <span className="font-mono text-xs break-all">
+                    {arn.split(":").pop()}
+                  </span>
+                </div>
+              )
+          )}
+        </div>
+      ) : (
+        <div className="mt-2 flex items-center gap-1 text-muted-foreground">
+          <Code className="size-3" />
+          <span className="text-xs">No Lambda functions</span>
+        </div>
+      )}
+      <div className="text-xs text-muted-foreground mt-2">
         <DateTimeDisplay dateString={alias.lastUpdatedDateTime} />
-      </TableCell>
-    </TableRow>
+      </div>
+    </div>
   );
 }
 
