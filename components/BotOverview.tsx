@@ -1,18 +1,40 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlertCircle,
   Bot,
   Calendar,
   Clock,
   Code,
+  Globe,
   GitBranch,
+  MessageSquare,
   Shield,
   Tag,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 
@@ -94,6 +116,7 @@ function DateTimeDisplay({
 
 export function BotOverview({ botId }: BotOverviewProps) {
   const { isAuthenticated } = useAuthStore();
+  const [selectedVersion, setSelectedVersion] = useState<string>("DRAFT");
 
   const botQuery = trpc.aws.describeBot.useQuery(
     { botId },
@@ -105,6 +128,11 @@ export function BotOverview({ botId }: BotOverviewProps) {
   );
   const aliasesQuery = trpc.aws.listBotAliases.useQuery(
     { botId },
+    { enabled: isAuthenticated }
+  );
+
+  const localesQuery = trpc.aws.listBotLocales.useQuery(
+    { botId, botVersion: selectedVersion },
     { enabled: isAuthenticated }
   );
 
@@ -205,6 +233,65 @@ export function BotOverview({ botId }: BotOverviewProps) {
               {bot.roleArn ?? "N/A"}
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Locales & Intents */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Globe className="size-4" />
+                Locales & Intents
+              </CardTitle>
+              <CardDescription>
+                Supported languages and their defined intents
+              </CardDescription>
+            </div>
+            <Select
+              value={selectedVersion}
+              onValueChange={setSelectedVersion}
+              disabled={versionsQuery.isLoading}
+            >
+              <SelectTrigger className="w-[120px] h-8">
+                <SelectValue placeholder="Version" />
+              </SelectTrigger>
+              <SelectContent>
+                {versionsQuery.data?.map((v) => (
+                  <SelectItem key={v.botVersion} value={v.botVersion ?? ""}>
+                    {v.botVersion}
+                  </SelectItem>
+                ))}
+                {!versionsQuery.data?.find((v) => v.botVersion === "DRAFT") && (
+                  <SelectItem value="DRAFT">DRAFT</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {localesQuery.isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : localesQuery.data?.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No locales configured for version {selectedVersion}
+            </p>
+          ) : (
+            <Accordion type="single" collapsible className="w-full">
+              {localesQuery.data?.map((locale) => (
+                <LocaleItem
+                  key={locale.localeId}
+                  botId={botId}
+                  botVersion={selectedVersion}
+                  locale={locale}
+                />
+              ))}
+            </Accordion>
+          )}
         </CardContent>
       </Card>
 
@@ -325,6 +412,88 @@ export function BotOverview({ botId }: BotOverviewProps) {
         </Card>
       )}
     </div>
+  );
+}
+
+interface LocaleItemProps {
+  botId: string;
+  botVersion: string;
+  locale: {
+    localeId?: string;
+    localeName?: string;
+    botLocaleStatus?: string;
+    description?: string;
+  };
+}
+
+function LocaleItem({ botId, botVersion, locale }: LocaleItemProps) {
+  const { isAuthenticated } = useAuthStore();
+
+  const intentsQuery = trpc.aws.listIntents.useQuery(
+    { botId, botVersion, localeId: locale.localeId ?? "" },
+    { enabled: isAuthenticated && !!locale.localeId }
+  );
+
+  return (
+    <AccordionItem value={locale.localeId ?? "unknown"} className="border-b-0">
+      <AccordionTrigger className="hover:no-underline hover:bg-muted/50 px-4 py-3 rounded-md transition-colors my-1">
+        <div className="flex items-center justify-between w-full pr-4">
+          <div className="flex items-center gap-2">
+            <Globe className="size-4 text-muted-foreground" />
+            <span className="font-medium">{locale.localeName}</span>
+            <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
+              {locale.localeId}
+            </span>
+          </div>
+          <StatusBadge status={locale.botLocaleStatus} />
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="px-4 pb-4">
+        {intentsQuery.isLoading ? (
+          <div className="space-y-2 border-l-2 border-muted pl-4 mt-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-6 w-48" />
+          </div>
+        ) : intentsQuery.data?.length === 0 ? (
+          <div className="text-muted-foreground text-sm pl-4 border-l-2 border-muted mt-2 py-2">
+            No intents defined
+          </div>
+        ) : (
+          <div className="mt-2">
+            <h4 className="text-xs font-medium uppercase text-muted-foreground mb-3 flex items-center gap-2">
+              <MessageSquare className="size-3" />
+              Intents ({intentsQuery.data?.length})
+            </h4>
+            <div className="grid gap-2 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {intentsQuery.data?.map((intent) => (
+                <Card
+                  key={intent.intentId}
+                  className="shadow-sm border bg-card/50 hover:bg-card transition-colors flex flex-col justify-center text-center"
+                >
+                  <CardContent className="p-2 space-y-1">
+                    <div
+                      className="font-medium text-xs w-full truncate"
+                      title={intent.intentName}
+                    >
+                      {intent.intentName}
+                    </div>
+                    {intent.description ? (
+                      <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
+                        {intent.description}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic opacity-50">
+                        No description
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </AccordionContent>
+    </AccordionItem>
   );
 }
 

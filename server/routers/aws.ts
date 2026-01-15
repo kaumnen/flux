@@ -3,8 +3,10 @@ import {
   DescribeBotCommand,
   LexModelsV2Client,
   ListBotAliasesCommand,
+  ListBotLocalesCommand,
   ListBotsCommand,
   ListBotVersionsCommand,
+  ListIntentsCommand,
 } from "@aws-sdk/client-lex-models-v2";
 import {
   LexRuntimeV2Client,
@@ -269,6 +271,70 @@ export const awsRouter = router({
             description: alias.description,
             creationDateTime: alias.creationDateTime?.toISOString(),
             lastUpdatedDateTime: alias.lastUpdatedDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listBotLocales: protectedProcedure
+    .input(
+      z.object({
+        botId: z.string().min(1),
+        botVersion: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListBotLocalesCommand({
+            botId: input.botId,
+            botVersion: input.botVersion,
+          })
+        );
+        return (
+          response.botLocaleSummaries?.map((locale) => ({
+            localeId: locale.localeId,
+            localeName: locale.localeName,
+            description: locale.description,
+            botLocaleStatus: locale.botLocaleStatus,
+            lastUpdatedDateTime: locale.lastUpdatedDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listIntents: protectedProcedure
+    .input(
+      z.object({
+        botId: z.string().min(1),
+        botVersion: z.string().min(1),
+        localeId: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListIntentsCommand({
+            botId: input.botId,
+            botVersion: input.botVersion,
+            localeId: input.localeId,
+          })
+        );
+        return (
+          response.intentSummaries?.map((intent) => ({
+            intentId: intent.intentId,
+            intentName: intent.intentName,
+            description: intent.description,
+            parentIntentSignature: intent.parentIntentSignature,
+            lastUpdatedDateTime: intent.lastUpdatedDateTime?.toISOString(),
           })) ?? []
         );
       } catch (error) {
