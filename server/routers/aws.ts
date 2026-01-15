@@ -3,9 +3,15 @@ import {
   DescribeBotCommand,
   LexModelsV2Client,
   ListBotAliasesCommand,
+  ListBotLocalesCommand,
   ListBotsCommand,
   ListBotVersionsCommand,
+  ListIntentsCommand,
 } from "@aws-sdk/client-lex-models-v2";
+import {
+  LexRuntimeV2Client,
+  RecognizeTextCommand,
+} from "@aws-sdk/client-lex-runtime-v2";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
@@ -85,6 +91,17 @@ function createSTSClient(credentials: AWSCredentials) {
 
 function createLexClient(credentials: AWSCredentials) {
   return new LexModelsV2Client({
+    region: credentials.region,
+    credentials: {
+      accessKeyId: credentials.accessKeyId,
+      secretAccessKey: credentials.secretAccessKey,
+      sessionToken: credentials.sessionToken,
+    },
+  });
+}
+
+function createLexRuntimeClient(credentials: AWSCredentials) {
+  return new LexRuntimeV2Client({
     region: credentials.region,
     credentials: {
       accessKeyId: credentials.accessKeyId,
@@ -261,6 +278,72 @@ export const awsRouter = router({
       }
     }),
 
+  listBotLocales: protectedProcedure
+    .input(
+      z.object({
+        botId: z.string().min(1),
+        botVersion: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListBotLocalesCommand({
+            botId: input.botId,
+            botVersion: input.botVersion,
+          })
+        );
+        return (
+          response.botLocaleSummaries?.map((locale) => ({
+            localeId: locale.localeId,
+            localeName: locale.localeName,
+            description: locale.description,
+            botLocaleStatus: locale.botLocaleStatus,
+            lastUpdatedDateTime: locale.lastUpdatedDateTime?.toISOString(),
+            lastBuildSubmittedDateTime:
+              locale.lastBuildSubmittedDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  listIntents: protectedProcedure
+    .input(
+      z.object({
+        botId: z.string().min(1),
+        botVersion: z.string().min(1),
+        localeId: z.string().min(1),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const lexClient = createLexClient(ctx.credentials);
+
+      try {
+        const response = await lexClient.send(
+          new ListIntentsCommand({
+            botId: input.botId,
+            botVersion: input.botVersion,
+            localeId: input.localeId,
+          })
+        );
+        return (
+          response.intentSummaries?.map((intent) => ({
+            intentId: intent.intentId,
+            intentName: intent.intentName,
+            description: intent.description,
+            parentIntentSignature: intent.parentIntentSignature,
+            lastUpdatedDateTime: intent.lastUpdatedDateTime?.toISOString(),
+          })) ?? []
+        );
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
   describeBotAlias: protectedProcedure
     .input(
       z.object({ botId: z.string().min(1), botAliasId: z.string().min(1) })
@@ -278,8 +361,10 @@ export const awsRouter = router({
 
         const localeSettings = response.botAliasLocaleSettings;
         const lambdaArns: Record<string, string | undefined> = {};
+        const locales: string[] = [];
         if (localeSettings) {
           for (const [locale, settings] of Object.entries(localeSettings)) {
+            locales.push(locale);
             lambdaArns[locale] =
               settings.codeHookSpecification?.lambdaCodeHook?.lambdaARN;
           }
@@ -292,8 +377,55 @@ export const awsRouter = router({
           botAliasStatus: response.botAliasStatus,
           description: response.description,
           lambdaArns,
+          locales,
           creationDateTime: response.creationDateTime?.toISOString(),
           lastUpdatedDateTime: response.lastUpdatedDateTime?.toISOString(),
+        };
+      } catch (error) {
+        handleAWSError(error, ctx.credentials.isSSO);
+      }
+    }),
+
+  recognizeText: protectedProcedure
+    .input(
+      z.object({
+        botId: z.string().min(1),
+        botAliasId: z.string().min(1),
+        localeId: z.string().min(1),
+        sessionId: z.string().min(1),
+        text: z.string().min(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lexRuntimeClient = createLexRuntimeClient(ctx.credentials);
+
+      const request = {
+        botId: input.botId,
+        botAliasId: input.botAliasId,
+        localeId: input.localeId,
+        sessionId: input.sessionId,
+        text: input.text,
+      };
+
+      try {
+        const response = await lexRuntimeClient.send(
+          new RecognizeTextCommand(request)
+        );
+
+        return {
+          messages: response.messages,
+          sessionState: response.sessionState,
+          interpretations: response.interpretations,
+          requestAttributes: response.requestAttributes,
+          sessionId: response.sessionId,
+          rawRequest: request,
+          rawResponse: {
+            messages: response.messages,
+            sessionState: response.sessionState,
+            interpretations: response.interpretations,
+            requestAttributes: response.requestAttributes,
+            sessionId: response.sessionId,
+          },
         };
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);

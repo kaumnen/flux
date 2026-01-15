@@ -41,10 +41,10 @@ const LEX_REGIONS = [
 ] as const;
 
 type RegionValue = (typeof LEX_REGIONS)[number]["value"];
-
-function isValidRegion(region: string): region is RegionValue {
-  return LEX_REGIONS.some((r) => r.value === region);
-}
+const REGION_VALUES = LEX_REGIONS.map((region) => region.value) as [
+  RegionValue,
+  ...RegionValue[],
+];
 
 interface ParsedCredentials {
   accessKeyId?: string;
@@ -169,7 +169,7 @@ const credentialsSchema = z.object({
     .min(1, "Secret Access Key is required")
     .refine(isValidSecretKeyFormat, "Invalid Secret Access Key format"),
   sessionToken: z.string().optional(),
-  region: z.string().min(1, "Region is required"),
+  region: z.enum(REGION_VALUES),
 });
 
 type CredentialsFormData = z.infer<typeof credentialsSchema>;
@@ -235,7 +235,7 @@ export function CredentialsModal({
       accessKeyId: data.accessKeyId,
       secretAccessKey: data.secretAccessKey,
       sessionToken: data.sessionToken || undefined,
-      region: data.region as (typeof LEX_REGIONS)[number]["value"],
+      region: data.region,
     });
   };
 
@@ -273,9 +273,14 @@ export function CredentialsModal({
         setValue("sessionToken", parsed.sessionToken);
         found.push("Session Token");
       }
-      if (parsed.region && isValidRegion(parsed.region)) {
-        setValue("region", parsed.region);
-        found.push("Region");
+      if (parsed.region) {
+        const isValidParsedRegion = (
+          REGION_VALUES as readonly string[]
+        ).includes(parsed.region);
+        if (isValidParsedRegion) {
+          setValue("region", parsed.region as RegionValue);
+          found.push("Region");
+        }
       }
       setParseStatus({ found, applied: true });
       setError(null);
@@ -315,6 +320,9 @@ export function CredentialsModal({
                 (paste credentials and fields auto-fill)
               </span>
             </Label>
+            <p className="text-xs text-muted-foreground">
+              Supports AWS CLI exports, PowerShell env, and credentials files.
+            </p>
             <Textarea
               id="pasteCredentials"
               placeholder={`Paste your AWS credentials here...
@@ -384,7 +392,11 @@ $Env:AWS_SECRET_ACCESS_KEY="..."`}
             <Label htmlFor="region">Region</Label>
             <Select
               value={selectedRegion}
-              onValueChange={(value) => setValue("region", value)}
+              onValueChange={(value) => {
+                if ((REGION_VALUES as readonly string[]).includes(value)) {
+                  setValue("region", value as RegionValue);
+                }
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a region" />

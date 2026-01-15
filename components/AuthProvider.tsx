@@ -11,14 +11,19 @@ interface AuthProviderProps {
 export function AuthProvider({ children, initialState }: AuthProviderProps) {
   const hydrate = useAuthStore((state) => state.hydrate);
   const hasHydrated = useRef(false);
+  const lastInitialState = useRef<AuthProviderProps["initialState"]>(null);
 
   if (!hasHydrated.current) {
     hasHydrated.current = true;
+    lastInitialState.current = initialState;
     hydrate(initialState);
   }
 
   useEffect(() => {
-    hydrate(initialState);
+    if (lastInitialState.current !== initialState) {
+      lastInitialState.current = initialState;
+      hydrate(initialState);
+    }
   }, [initialState, hydrate]);
 
   return <>{children}</>;
