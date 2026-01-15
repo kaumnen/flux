@@ -84,7 +84,8 @@ export function TestBuilder() {
     downloadCSV(testSet);
   };
 
-  const isExportDisabled =
+  const isExportDisabled = testSet.conversations.length === 0;
+  const isUploadDisabled =
     !testSet.name.trim() || testSet.conversations.length === 0;
 
   return (
@@ -109,7 +110,7 @@ export function TestBuilder() {
             Export CSV
           </Button>
           <Button
-            disabled={isExportDisabled}
+            disabled={isUploadDisabled}
             onClick={() => setUploadDialogOpen(true)}
           >
             <Upload className="size-4 mr-2" />

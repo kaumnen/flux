@@ -205,8 +205,9 @@ function UserTurnEditor({ turn, onChange }: UserTurnEditorProps) {
         </div>
         {turn.expectedSlots && Object.keys(turn.expectedSlots).length > 0 && (
           <div className="space-y-2">
-            {Object.entries(turn.expectedSlots).map(([name, value]) => (
-              <div key={name} className="flex gap-2 items-center">
+            {Object.entries(turn.expectedSlots).map(([name, value], index) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: slot names change during editing, need stable key
+              <div key={index} className="flex gap-2 items-center">
                 <Input
                   className="w-32"
                   placeholder="Slot name"
