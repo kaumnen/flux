@@ -12,6 +12,7 @@ import { z } from "zod/v4";
 import {
   type AWSCredentials,
   clearSession,
+  clearSessionCookie,
   protectedProcedure,
   publicProcedure,
   router,
@@ -120,7 +121,13 @@ export const awsRouter = router({
       try {
         const identity = await stsClient.send(new GetCallerIdentityCommand({}));
 
-        updateSession(ctx.sessionId, { credentials });
+        const userInfo = {
+          account: identity.Account ?? "",
+          arn: identity.Arn ?? "",
+          userId: identity.UserId ?? "",
+        };
+
+        updateSession(ctx.sessionId, { credentials, userInfo });
         await setSessionCookie(ctx.sessionId);
 
         return {
@@ -136,6 +143,7 @@ export const awsRouter = router({
 
   disconnect: publicProcedure.mutation(async ({ ctx }) => {
     clearSession(ctx.sessionId);
+    await clearSessionCookie();
     return { success: true };
   }),
 

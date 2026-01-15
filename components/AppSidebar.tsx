@@ -29,11 +29,12 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { isAuthenticated, userInfo, setUnauthenticated } = useAuthStore();
+  const { isAuthenticated, userInfo, isHydrated, setUnauthenticated } =
+    useAuthStore();
   const utils = trpc.useUtils();
 
   const botsQuery = trpc.aws.listBots.useQuery(undefined, {
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && isHydrated,
     retry: false,
   });
 
@@ -86,18 +87,39 @@ export function AppSidebar() {
             <SidebarGroupLabel>Bots</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {!isAuthenticated ? (
-                  <SidebarMenuItem>
-                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                      Connect to AWS to view bots
-                    </div>
-                  </SidebarMenuItem>
+                {!isHydrated ? (
+                  <>
+                    <SidebarMenuItem>
+                      <div className="flex h-8 items-center gap-2 px-2">
+                        <div className="size-4 rounded-md bg-accent animate-pulse" />
+                        <div className="h-4 flex-1 rounded-md bg-accent animate-pulse" />
+                      </div>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <div className="flex h-8 items-center gap-2 px-2">
+                        <div className="size-4 rounded-md bg-accent animate-pulse" />
+                        <div className="h-4 flex-1 rounded-md bg-accent animate-pulse" />
+                      </div>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <div className="flex h-8 items-center gap-2 px-2">
+                        <div className="size-4 rounded-md bg-accent animate-pulse" />
+                        <div className="h-4 flex-1 rounded-md bg-accent animate-pulse" />
+                      </div>
+                    </SidebarMenuItem>
+                  </>
                 ) : botsQuery.isLoading ? (
                   <>
                     <SidebarMenuSkeleton showIcon />
                     <SidebarMenuSkeleton showIcon />
                     <SidebarMenuSkeleton showIcon />
                   </>
+                ) : !isAuthenticated ? (
+                  <SidebarMenuItem>
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      Connect to AWS to view bots
+                    </div>
+                  </SidebarMenuItem>
                 ) : botsQuery.data?.length === 0 ? (
                   <SidebarMenuItem>
                     <div className="px-2 py-4 text-sm text-muted-foreground text-center">
@@ -126,7 +148,18 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="border-t">
-          {isAuthenticated && userInfo ? (
+          {!isHydrated ? (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <div className="size-4 rounded-full bg-muted animate-pulse" />
+                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                  <div className="h-4 bg-muted rounded animate-pulse w-24" />
+                  <div className="h-3 bg-muted rounded animate-pulse w-20" />
+                </div>
+              </div>
+              <div className="h-8 bg-muted rounded animate-pulse" />
+            </div>
+          ) : isAuthenticated && userInfo ? (
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2 px-2 py-1">
                 <User className="size-4 text-muted-foreground" />

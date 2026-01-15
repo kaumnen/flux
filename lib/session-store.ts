@@ -35,6 +35,11 @@ export interface SessionData {
     region: string;
     isSSO: boolean;
   };
+  userInfo?: {
+    account: string;
+    arn: string;
+    userId: string;
+  };
 }
 
 export function getSession(sessionId: string): SessionData | null {

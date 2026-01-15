@@ -53,6 +53,11 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
   });
 }
 
+export async function clearSessionCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete("session_id");
+}
+
 export function updateSession(sessionId: string, session: Session): void {
   setSessionInStore(sessionId, session);
 }
@@ -63,7 +68,12 @@ export function clearSession(sessionId: string): void {
 
 export async function getServerAuthState(): Promise<{
   isAuthenticated: boolean;
-  userInfo: { region: string } | null;
+  userInfo: {
+    region: string;
+    account?: string;
+    arn?: string;
+    userId?: string;
+  } | null;
   isSSO: boolean;
 } | null> {
   const { session } = await getSession();
@@ -72,7 +82,12 @@ export async function getServerAuthState(): Promise<{
   }
   return {
     isAuthenticated: true,
-    userInfo: { region: session.credentials.region },
+    userInfo: {
+      region: session.credentials.region,
+      account: session.userInfo?.account,
+      arn: session.userInfo?.arn,
+      userId: session.userInfo?.userId,
+    },
     isSSO: session.credentials.isSSO,
   };
 }
