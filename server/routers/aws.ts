@@ -7,6 +7,7 @@ import {
   ListBotsCommand,
   ListBotVersionsCommand,
   ListIntentsCommand,
+  ListTestSetsCommand,
 } from "@aws-sdk/client-lex-models-v2";
 import {
   LexRuntimeV2Client,
@@ -15,6 +16,7 @@ import {
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod/v4";
+import { LEX_REGION_VALUES } from "@/lib/constants/regions";
 import {
   type AWSCredentials,
   clearSession,
@@ -26,25 +28,11 @@ import {
   updateSession,
 } from "@/lib/trpc/server";
 
-const LEX_REGIONS = [
-  "us-east-1",
-  "us-west-2",
-  "eu-west-1",
-  "eu-west-2",
-  "eu-central-1",
-  "ap-southeast-1",
-  "ap-southeast-2",
-  "ap-northeast-1",
-  "ap-northeast-2",
-  "ca-central-1",
-  "af-south-1",
-] as const;
-
 const connectSchema = z.object({
   accessKeyId: z.string().min(1),
   secretAccessKey: z.string().min(1),
   sessionToken: z.string().optional(),
-  region: z.enum(LEX_REGIONS),
+  region: z.enum(LEX_REGION_VALUES),
 });
 
 function isAWSCredentialError(error: unknown): boolean {
@@ -163,6 +151,22 @@ export const awsRouter = router({
     await clearSessionCookie();
     return { success: true };
   }),
+
+  changeRegion: protectedProcedure
+    .input(z.object({ region: z.enum(LEX_REGION_VALUES) }))
+    .mutation(async ({ ctx, input }) => {
+      const updatedCredentials: AWSCredentials = {
+        ...ctx.credentials,
+        region: input.region,
+      };
+
+      updateSession(ctx.sessionId, {
+        credentials: updatedCredentials,
+        userInfo: ctx.session.userInfo,
+      });
+
+      return { region: input.region };
+    }),
 
   getCallerIdentity: protectedProcedure.query(async ({ ctx }) => {
     const stsClient = createSTSClient(ctx.credentials);
@@ -431,4 +435,30 @@ export const awsRouter = router({
         handleAWSError(error, ctx.credentials.isSSO);
       }
     }),
+
+  listTestSets: protectedProcedure.query(async ({ ctx }) => {
+    const lexClient = createLexClient(ctx.credentials);
+
+    try {
+      const response = await lexClient.send(
+        new ListTestSetsCommand({
+          sortBy: { attribute: "LastUpdatedDateTime", order: "Descending" },
+        })
+      );
+      return (
+        response.testSets?.map((testSet) => ({
+          testSetId: testSet.testSetId,
+          testSetName: testSet.testSetName,
+          description: testSet.description,
+          modality: testSet.modality,
+          status: testSet.status,
+          numTurns: testSet.numTurns,
+          creationDateTime: testSet.creationDateTime?.toISOString(),
+          lastUpdatedDateTime: testSet.lastUpdatedDateTime?.toISOString(),
+        })) ?? []
+      );
+    } catch (error) {
+      handleAWSError(error, ctx.credentials.isSSO);
+    }
+  }),
 });

@@ -1,6 +1,13 @@
 "use client";
 
-import { Bot, ChevronRight, LogOut, Plug, User } from "lucide-react";
+import {
+  Bot,
+  ChevronRight,
+  ClipboardList,
+  LogOut,
+  Plug,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -29,6 +36,7 @@ import {
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 import { CredentialsModal } from "./CredentialsModal";
+import { RegionSelector } from "./RegionSelector";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function AppSidebar() {
@@ -88,8 +96,8 @@ export function AppSidebar() {
             Amazon Lex V2 helper
           </div>
           {isAuthenticated && userInfo && (
-            <div className="px-2 text-xs text-muted-foreground">
-              {userInfo.region}
+            <div className="px-2">
+              <RegionSelector />
             </div>
           )}
         </SidebarHeader>
@@ -197,6 +205,26 @@ export function AppSidebar() {
                     );
                   })
                 )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <SidebarGroup>
+            <SidebarGroupLabel>Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === "/test-builder"}
+                    tooltip="Create test sets for LexV2 bots"
+                  >
+                    <Link href="/test-builder">
+                      <ClipboardList className="size-4" />
+                      <span>Test Builder</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
