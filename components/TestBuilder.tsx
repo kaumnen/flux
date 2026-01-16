@@ -1,12 +1,20 @@
 "use client";
 
-import { Bot, Download, MessageSquare, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import {
+  Bot,
+  Download,
+  MessageSquare,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import {
   Panel,
   Group as PanelGroup,
   Separator as PanelResizeHandle,
 } from "react-resizable-panels";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadCSV } from "@/lib/test-export";
+import { parseCSV } from "@/lib/test-import";
 import { isTestSetComplete } from "@/lib/test-validation";
 import { ConversationPreview } from "./ConversationPreview";
 import { TestConversationEditor } from "./TestConversationEditor";
@@ -44,6 +53,8 @@ function createEmptyConversation(): TestConversation {
 }
 
 export function TestBuilder() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [testSet, setTestSet] = useState<TestSet>({
     name: "",
     description: "",
@@ -83,6 +94,37 @@ export function TestBuilder() {
     downloadCSV(testSet);
   };
 
+  const handleImportClick = () => {
+    setImportError(null);
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const result = parseCSV(content, file.name);
+
+      if (result.success) {
+        setTestSet(result.testSet);
+        setImportError(null);
+      } else {
+        setImportError(result.error);
+      }
+    };
+    reader.onerror = () => {
+      setImportError("Failed to read file");
+    };
+    reader.readAsText(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const isDataComplete = isTestSetComplete(testSet);
   const isExportDisabled = !isDataComplete;
 
@@ -103,16 +145,33 @@ export function TestBuilder() {
                 </div>
               </div>
               <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <Button variant="outline" onClick={handleImportClick}>
+                  <Upload className="size-4 mr-2" />
+                  Import Test
+                </Button>
                 <Button
                   variant="outline"
                   onClick={handleExportCSV}
                   disabled={isExportDisabled}
                 >
                   <Download className="size-4 mr-2" />
-                  Export CSV
+                  Export Test
                 </Button>
               </div>
             </div>
+
+            {importError && (
+              <Alert variant="destructive">
+                <AlertDescription>{importError}</AlertDescription>
+              </Alert>
+            )}
 
             {/* Test Set Metadata */}
             <Card>
