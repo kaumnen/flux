@@ -32,6 +32,9 @@ RUN groupadd --system --gid 1001 nodejs && \
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Create data directory for session storage
+RUN mkdir -p .flux && chown nextjs:nodejs .flux
+
 USER nextjs
 
 EXPOSE 3000
