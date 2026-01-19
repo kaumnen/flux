@@ -1,4 +1,5 @@
 # Flux
+<img width="1408" height="768" alt="image" src="https://github.com/user-attachments/assets/36908568-0553-4e9c-b295-f9a6ffb5f956" />
 
 Flux is a lightweight helper app for working with AWS Lex V2 bots. It provides a clean UI for managing bots, viewing details, testing flows and creating test sets. 
 
