@@ -54,6 +54,18 @@ function validateConversation(
     return errors;
   }
 
+  // Check for consecutive user turns
+  for (let i = 1; i < conversation.turns.length; i++) {
+    if (
+      conversation.turns[i].type === "user" &&
+      conversation.turns[i - 1].type === "user"
+    ) {
+      errors.push(
+        `Conversation ${conversationIndex + 1}: Consecutive user turns at Turn ${i} and ${i + 1} - user must wait for agent response`
+      );
+    }
+  }
+
   for (let i = 0; i < conversation.turns.length; i++) {
     errors.push(...validateTurn(conversation.turns[i], i, conversationIndex));
   }
