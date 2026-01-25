@@ -23,9 +23,9 @@ interface TestConversationEditorProps {
   onChange: (conversation: TestConversation) => void;
 }
 
-function hasAlternationError(turns: TestTurn[]): boolean {
+function hasConsecutiveUserError(turns: TestTurn[]): boolean {
   for (let i = 1; i < turns.length; i++) {
-    if (turns[i].type === turns[i - 1].type) {
+    if (turns[i].type === "user" && turns[i - 1].type === "user") {
       return true;
     }
   }
@@ -37,11 +37,13 @@ export function TestConversationEditor({
   onChange,
 }: TestConversationEditorProps) {
   const lastTurn = conversation.turns[conversation.turns.length - 1];
-  const nextTurnType = lastTurn?.type === "user" ? "agent" : "user";
+  const canAddUserTurn = !lastTurn || lastTurn.type === "agent";
+  const canAddAgentTurn =
+    lastTurn?.type === "user" || lastTurn?.type === "agent";
 
-  const handleAddTurn = () => {
+  const handleAddTurn = (turnType: "user" | "agent") => {
     const newTurn: TestTurn =
-      nextTurnType === "user"
+      turnType === "user"
         ? {
             id: generateId(),
             type: "user",
@@ -74,16 +76,16 @@ export function TestConversationEditor({
     });
   };
 
-  const showAlternationError = hasAlternationError(conversation.turns);
+  const showConsecutiveUserError = hasConsecutiveUserError(conversation.turns);
 
   return (
     <div className="space-y-3">
-      {showAlternationError && (
+      {showConsecutiveUserError && (
         <Alert variant="destructive">
           <AlertCircle className="size-4" />
           <AlertDescription>
-            LexV2 requires turns to alternate between User and Agent. Please fix
-            the turn order before exporting.
+            Consecutive user turns are not allowed. User must wait for agent
+            response before speaking again.
           </AlertDescription>
         </Alert>
       )}
@@ -130,10 +132,28 @@ export function TestConversationEditor({
         </div>
       ))}
 
-      <Button variant="outline" size="sm" onClick={handleAddTurn}>
-        <Plus className="size-3 mr-1" />
-        Add {nextTurnType === "user" ? "User" : "Agent"} Turn
-      </Button>
+      <div className="flex gap-2">
+        {canAddUserTurn && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddTurn("user")}
+          >
+            <Plus className="size-3 mr-1" />
+            Add User Turn
+          </Button>
+        )}
+        {canAddAgentTurn && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleAddTurn("agent")}
+          >
+            <Plus className="size-3 mr-1" />
+            Add Agent Turn
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
