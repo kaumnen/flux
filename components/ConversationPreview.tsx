@@ -66,7 +66,7 @@ export function ConversationPreview({
 
         {/* Conversation Tabs */}
         {conversations.length > 1 && (
-          <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex gap-1 overflow-x-auto pb-1">
             {conversations.map((conv, index) => (
               <button
                 key={conv.id}

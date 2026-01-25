@@ -323,7 +323,7 @@ export function BotOverview({ botId }: BotOverviewProps) {
           ) : aliasesQuery.data?.length === 0 ? (
             <p className="text-muted-foreground text-sm">No aliases found</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {aliasesQuery.data?.map((alias) => (
                 <AliasItem key={alias.botAliasId} botId={botId} alias={alias} />
               ))}
@@ -348,7 +348,7 @@ export function BotOverview({ botId }: BotOverviewProps) {
           ) : versionsQuery.data?.length === 0 ? (
             <p className="text-muted-foreground text-sm">No versions found</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {versionsQuery.data?.map((version) => (
                 <div
                   key={version.botVersion}
@@ -487,7 +487,7 @@ function LocaleItem({ botId, botVersion, locale }: LocaleItemProps) {
               <MessageSquare className="size-3" />
               Intents ({intentsQuery.data?.length})
             </h4>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
