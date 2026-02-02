@@ -188,16 +188,37 @@ export const awsRouter = router({
     const lexClient = createLexClient(ctx.credentials);
 
     try {
-      const response = await lexClient.send(new ListBotsCommand({}));
-      return (
-        response.botSummaries?.map((bot) => ({
-          botId: bot.botId,
-          botName: bot.botName,
-          botStatus: bot.botStatus,
-          description: bot.description,
-          latestBotVersion: bot.latestBotVersion,
-        })) ?? []
-      );
+      const allBots: {
+        botId: string | undefined;
+        botName: string | undefined;
+        botStatus: string | undefined;
+        description: string | undefined;
+        latestBotVersion: string | undefined;
+      }[] = [];
+
+      let nextToken: string | undefined;
+
+      do {
+        const response = await lexClient.send(
+          new ListBotsCommand({ nextToken, maxResults: 50 })
+        );
+
+        if (response.botSummaries) {
+          allBots.push(
+            ...response.botSummaries.map((bot) => ({
+              botId: bot.botId,
+              botName: bot.botName,
+              botStatus: bot.botStatus,
+              description: bot.description,
+              latestBotVersion: bot.latestBotVersion,
+            }))
+          );
+        }
+
+        nextToken = response.nextToken;
+      } while (nextToken);
+
+      return allBots;
     } catch (error) {
       handleAWSError(error, ctx.credentials.isSSO);
     }
@@ -237,21 +258,42 @@ export const awsRouter = router({
       const lexClient = createLexClient(ctx.credentials);
 
       try {
-        const response = await lexClient.send(
-          new ListBotVersionsCommand({
-            botId: input.botId,
-            sortBy: { attribute: "BotVersion", order: "Descending" },
-          })
-        );
-        return (
-          response.botVersionSummaries?.map((version) => ({
-            botVersion: version.botVersion,
-            botName: version.botName,
-            botStatus: version.botStatus,
-            description: version.description,
-            creationDateTime: version.creationDateTime?.toISOString(),
-          })) ?? []
-        );
+        const allVersions: {
+          botVersion: string | undefined;
+          botName: string | undefined;
+          botStatus: string | undefined;
+          description: string | undefined;
+          creationDateTime: string | undefined;
+        }[] = [];
+
+        let nextToken: string | undefined;
+
+        do {
+          const response = await lexClient.send(
+            new ListBotVersionsCommand({
+              botId: input.botId,
+              sortBy: { attribute: "BotVersion", order: "Descending" },
+              nextToken,
+              maxResults: 50,
+            })
+          );
+
+          if (response.botVersionSummaries) {
+            allVersions.push(
+              ...response.botVersionSummaries.map((version) => ({
+                botVersion: version.botVersion,
+                botName: version.botName,
+                botStatus: version.botStatus,
+                description: version.description,
+                creationDateTime: version.creationDateTime?.toISOString(),
+              }))
+            );
+          }
+
+          nextToken = response.nextToken;
+        } while (nextToken);
+
+        return allVersions;
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);
       }
@@ -263,20 +305,45 @@ export const awsRouter = router({
       const lexClient = createLexClient(ctx.credentials);
 
       try {
-        const response = await lexClient.send(
-          new ListBotAliasesCommand({ botId: input.botId })
-        );
-        return (
-          response.botAliasSummaries?.map((alias) => ({
-            botAliasId: alias.botAliasId,
-            botAliasName: alias.botAliasName,
-            botVersion: alias.botVersion,
-            botAliasStatus: alias.botAliasStatus,
-            description: alias.description,
-            creationDateTime: alias.creationDateTime?.toISOString(),
-            lastUpdatedDateTime: alias.lastUpdatedDateTime?.toISOString(),
-          })) ?? []
-        );
+        const allAliases: {
+          botAliasId: string | undefined;
+          botAliasName: string | undefined;
+          botVersion: string | undefined;
+          botAliasStatus: string | undefined;
+          description: string | undefined;
+          creationDateTime: string | undefined;
+          lastUpdatedDateTime: string | undefined;
+        }[] = [];
+
+        let nextToken: string | undefined;
+
+        do {
+          const response = await lexClient.send(
+            new ListBotAliasesCommand({
+              botId: input.botId,
+              nextToken,
+              maxResults: 50,
+            })
+          );
+
+          if (response.botAliasSummaries) {
+            allAliases.push(
+              ...response.botAliasSummaries.map((alias) => ({
+                botAliasId: alias.botAliasId,
+                botAliasName: alias.botAliasName,
+                botVersion: alias.botVersion,
+                botAliasStatus: alias.botAliasStatus,
+                description: alias.description,
+                creationDateTime: alias.creationDateTime?.toISOString(),
+                lastUpdatedDateTime: alias.lastUpdatedDateTime?.toISOString(),
+              }))
+            );
+          }
+
+          nextToken = response.nextToken;
+        } while (nextToken);
+
+        return allAliases;
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);
       }
@@ -293,23 +360,45 @@ export const awsRouter = router({
       const lexClient = createLexClient(ctx.credentials);
 
       try {
-        const response = await lexClient.send(
-          new ListBotLocalesCommand({
-            botId: input.botId,
-            botVersion: input.botVersion,
-          })
-        );
-        return (
-          response.botLocaleSummaries?.map((locale) => ({
-            localeId: locale.localeId,
-            localeName: locale.localeName,
-            description: locale.description,
-            botLocaleStatus: locale.botLocaleStatus,
-            lastUpdatedDateTime: locale.lastUpdatedDateTime?.toISOString(),
-            lastBuildSubmittedDateTime:
-              locale.lastBuildSubmittedDateTime?.toISOString(),
-          })) ?? []
-        );
+        const allLocales: {
+          localeId: string | undefined;
+          localeName: string | undefined;
+          description: string | undefined;
+          botLocaleStatus: string | undefined;
+          lastUpdatedDateTime: string | undefined;
+          lastBuildSubmittedDateTime: string | undefined;
+        }[] = [];
+
+        let nextToken: string | undefined;
+
+        do {
+          const response = await lexClient.send(
+            new ListBotLocalesCommand({
+              botId: input.botId,
+              botVersion: input.botVersion,
+              nextToken,
+              maxResults: 50,
+            })
+          );
+
+          if (response.botLocaleSummaries) {
+            allLocales.push(
+              ...response.botLocaleSummaries.map((locale) => ({
+                localeId: locale.localeId,
+                localeName: locale.localeName,
+                description: locale.description,
+                botLocaleStatus: locale.botLocaleStatus,
+                lastUpdatedDateTime: locale.lastUpdatedDateTime?.toISOString(),
+                lastBuildSubmittedDateTime:
+                  locale.lastBuildSubmittedDateTime?.toISOString(),
+              }))
+            );
+          }
+
+          nextToken = response.nextToken;
+        } while (nextToken);
+
+        return allLocales;
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);
       }
@@ -327,22 +416,43 @@ export const awsRouter = router({
       const lexClient = createLexClient(ctx.credentials);
 
       try {
-        const response = await lexClient.send(
-          new ListIntentsCommand({
-            botId: input.botId,
-            botVersion: input.botVersion,
-            localeId: input.localeId,
-          })
-        );
-        return (
-          response.intentSummaries?.map((intent) => ({
-            intentId: intent.intentId,
-            intentName: intent.intentName,
-            description: intent.description,
-            parentIntentSignature: intent.parentIntentSignature,
-            lastUpdatedDateTime: intent.lastUpdatedDateTime?.toISOString(),
-          })) ?? []
-        );
+        const allIntents: {
+          intentId: string | undefined;
+          intentName: string | undefined;
+          description: string | undefined;
+          parentIntentSignature: string | undefined;
+          lastUpdatedDateTime: string | undefined;
+        }[] = [];
+
+        let nextToken: string | undefined;
+
+        do {
+          const response = await lexClient.send(
+            new ListIntentsCommand({
+              botId: input.botId,
+              botVersion: input.botVersion,
+              localeId: input.localeId,
+              nextToken,
+              maxResults: 50,
+            })
+          );
+
+          if (response.intentSummaries) {
+            allIntents.push(
+              ...response.intentSummaries.map((intent) => ({
+                intentId: intent.intentId,
+                intentName: intent.intentName,
+                description: intent.description,
+                parentIntentSignature: intent.parentIntentSignature,
+                lastUpdatedDateTime: intent.lastUpdatedDateTime?.toISOString(),
+              }))
+            );
+          }
+
+          nextToken = response.nextToken;
+        } while (nextToken);
+
+        return allIntents;
       } catch (error) {
         handleAWSError(error, ctx.credentials.isSSO);
       }
@@ -440,23 +550,47 @@ export const awsRouter = router({
     const lexClient = createLexClient(ctx.credentials);
 
     try {
-      const response = await lexClient.send(
-        new ListTestSetsCommand({
-          sortBy: { attribute: "LastUpdatedDateTime", order: "Descending" },
-        })
-      );
-      return (
-        response.testSets?.map((testSet) => ({
-          testSetId: testSet.testSetId,
-          testSetName: testSet.testSetName,
-          description: testSet.description,
-          modality: testSet.modality,
-          status: testSet.status,
-          numTurns: testSet.numTurns,
-          creationDateTime: testSet.creationDateTime?.toISOString(),
-          lastUpdatedDateTime: testSet.lastUpdatedDateTime?.toISOString(),
-        })) ?? []
-      );
+      const allTestSets: {
+        testSetId: string | undefined;
+        testSetName: string | undefined;
+        description: string | undefined;
+        modality: string | undefined;
+        status: string | undefined;
+        numTurns: number | undefined;
+        creationDateTime: string | undefined;
+        lastUpdatedDateTime: string | undefined;
+      }[] = [];
+
+      let nextToken: string | undefined;
+
+      do {
+        const response = await lexClient.send(
+          new ListTestSetsCommand({
+            sortBy: { attribute: "LastUpdatedDateTime", order: "Descending" },
+            nextToken,
+            maxResults: 50,
+          })
+        );
+
+        if (response.testSets) {
+          allTestSets.push(
+            ...response.testSets.map((testSet) => ({
+              testSetId: testSet.testSetId,
+              testSetName: testSet.testSetName,
+              description: testSet.description,
+              modality: testSet.modality,
+              status: testSet.status,
+              numTurns: testSet.numTurns,
+              creationDateTime: testSet.creationDateTime?.toISOString(),
+              lastUpdatedDateTime: testSet.lastUpdatedDateTime?.toISOString(),
+            }))
+          );
+        }
+
+        nextToken = response.nextToken;
+      } while (nextToken);
+
+      return allTestSets;
     } catch (error) {
       handleAWSError(error, ctx.credentials.isSSO);
     }
