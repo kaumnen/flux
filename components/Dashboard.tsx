@@ -69,7 +69,7 @@ export function Dashboard() {
   const availableBots = bots.filter((b) => b.botStatus === "Available").length;
 
   return (
-    <div className="flex-1 p-8 space-y-8">
+    <div className="flex-1 p-8 space-y-8 overflow-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -167,7 +167,7 @@ export function Dashboard() {
 
 function DashboardSkeleton() {
   return (
-    <div className="flex-1 p-8 space-y-8">
+    <div className="flex-1 p-8 space-y-8 overflow-auto">
       <div className="space-y-2">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-64" />

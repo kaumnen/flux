@@ -154,14 +154,14 @@ export function BotDebugInfo({
 
       <TabsContent
         value="raw"
-        className="flex-1 overflow-hidden m-0 flex flex-col"
+        className="flex-1 overflow-auto m-0 flex flex-col"
       >
         {messages.filter((m) => m.rawRequest || m.rawResponse).length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
             <p>No raw requests/responses available</p>
           </div>
         ) : (
-          <div className="flex h-full overflow-hidden">
+          <div className="flex h-full overflow-auto">
             {/* Message List Sidebar */}
             <div className="w-[80px] border-r overflow-y-auto shrink-0 bg-muted/10">
               <div className="flex flex-col">
@@ -210,7 +210,7 @@ export function BotDebugInfo({
                       </span>
                     </div>
 
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-auto">
                       <Tabs
                         defaultValue={
                           selectedMessage.rawRequest ? "request" : "response"
@@ -234,10 +234,10 @@ export function BotDebugInfo({
 
                         <TabsContent
                           value="request"
-                          className="flex-1 mt-2 overflow-hidden min-h-0"
+                          className="flex-1 mt-2 overflow-auto min-h-0"
                         >
                           <Card className="h-full flex flex-col">
-                            <CardContent className="p-0 flex-1 overflow-hidden">
+                            <CardContent className="p-0 flex-1 overflow-auto">
                               <div className="flex items-center justify-end px-2 py-1 border-b bg-muted/30">
                                 <CopyButton
                                   value={JSON.stringify(
@@ -273,10 +273,10 @@ export function BotDebugInfo({
 
                         <TabsContent
                           value="response"
-                          className="flex-1 mt-2 overflow-hidden min-h-0"
+                          className="flex-1 mt-2 overflow-auto min-h-0"
                         >
                           <Card className="h-full flex flex-col">
-                            <CardContent className="p-0 flex-1 overflow-hidden">
+                            <CardContent className="p-0 flex-1 overflow-auto">
                               <div className="flex items-center justify-end px-2 py-1 border-b bg-muted/30">
                                 <CopyButton
                                   value={JSON.stringify(

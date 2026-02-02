@@ -10,7 +10,7 @@ export default async function BotPage({ params }: BotPageProps) {
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col h-full overflow-auto">
         <BotDetail botId={botId} />
       </div>
     </ErrorBoundary>

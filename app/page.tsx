@@ -1,5 +1,9 @@
 import { Dashboard } from "@/components/Dashboard";
 
 export default function Home() {
-  return <Dashboard />;
+  return (
+    <div className="h-full overflow-auto">
+      <Dashboard />
+    </div>
+  );
 }
