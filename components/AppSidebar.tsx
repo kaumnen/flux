@@ -50,6 +50,8 @@ export function AppSidebar() {
     useAuthStore();
   const utils = trpc.useUtils();
 
+  const [openBots, setOpenBots] = useState<Set<string>>(new Set());
+
   const botsQuery = trpc.aws.listBots.useQuery(undefined, {
     enabled: isAuthenticated && isHydrated,
     retry: false,
@@ -62,6 +64,21 @@ export function AppSidebar() {
       setCredentialsModalOpen(true);
     }
   }, [botsQuery.error, setUnauthenticated]);
+
+  useEffect(() => {
+    if (pathname) {
+      const match = pathname.match(/^\/bots\/([^/]+)/);
+      const botId = match?.[1];
+      if (botId) {
+        setOpenBots((prev) => {
+          if (prev.has(botId)) return prev;
+          const next = new Set(prev);
+          next.add(botId);
+          return next;
+        });
+      }
+    }
+  }, [pathname]);
 
   const disconnectMutation = trpc.aws.disconnect.useMutation({
     onSuccess: () => {
@@ -148,22 +165,29 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 ) : (
                   botsQuery.data?.map((bot) => {
-                    const isSelected = pathname?.startsWith(
-                      `/bots/${bot.botId}`
-                    );
+                    if (!bot.botId) return null;
+                    const botId = bot.botId;
+                    const isSelected = pathname?.startsWith(`/bots/${botId}`);
                     const currentTab = searchParams.get("tab") || "overview";
                     const isOverview =
-                      pathname === `/bots/${bot.botId}` &&
+                      pathname === `/bots/${botId}` &&
                       currentTab === "overview";
                     const isChat =
-                      pathname === `/bots/${bot.botId}` &&
-                      currentTab === "chat";
+                      pathname === `/bots/${botId}` && currentTab === "chat";
 
                     return (
                       <Collapsible
-                        key={bot.botId}
+                        key={botId}
                         asChild
-                        defaultOpen={isSelected}
+                        open={openBots.has(botId)}
+                        onOpenChange={(open) => {
+                          setOpenBots((prev) => {
+                            const next = new Set(prev);
+                            if (open) next.add(botId);
+                            else next.delete(botId);
+                            return next;
+                          });
+                        }}
                         className="group/collapsible"
                       >
                         <SidebarMenuItem>
@@ -171,10 +195,11 @@ export function AppSidebar() {
                             <SidebarMenuButton
                               tooltip={bot.description || bot.botName}
                               isActive={isSelected}
+                              className="h-auto min-h-8 [&>span:last-child]:whitespace-normal [&>span:last-child]:break-words"
                             >
-                              <Bot className="size-4" />
+                              <Bot className="size-4 shrink-0 self-start mt-0.5" />
                               <span>{bot.botName}</span>
-                              <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              <ChevronRight className="ml-auto shrink-0 self-start mt-0.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
@@ -184,16 +209,14 @@ export function AppSidebar() {
                                   asChild
                                   isActive={isOverview}
                                 >
-                                  <Link
-                                    href={`/bots/${bot.botId}?tab=overview`}
-                                  >
+                                  <Link href={`/bots/${botId}?tab=overview`}>
                                     <span>Overview</span>
                                   </Link>
                                 </SidebarMenuSubButton>
                               </SidebarMenuSubItem>
                               <SidebarMenuSubItem>
                                 <SidebarMenuSubButton asChild isActive={isChat}>
-                                  <Link href={`/bots/${bot.botId}?tab=chat`}>
+                                  <Link href={`/bots/${botId}?tab=chat`}>
                                     <span>Chat & Debug</span>
                                   </Link>
                                 </SidebarMenuSubButton>
