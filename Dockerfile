@@ -27,7 +27,8 @@ ENV NODE_ENV=production \
     HOSTNAME="0.0.0.0"
 
 RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --no-log-init -g nodejs nextjs
+    useradd --system --uid 1001 --no-log-init -g nodejs nextjs && \
+    mkdir -p /app/.flux && chown nextjs:nodejs /app/.flux
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
