@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-const DATA_DIR = ".flux";
+const DATA_DIR = join(process.cwd(), ".flux");
 const DB_PATH = join(DATA_DIR, "sessions.db");
 const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24 hours
 
