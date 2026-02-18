@@ -1,3 +1,10 @@
+export interface ImageResponseCard {
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+  buttons?: { text: string; value: string }[];
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "bot";
@@ -7,4 +14,5 @@ export interface ChatMessage {
   rawResponse?: unknown;
   sessionState?: unknown;
   interpretations?: unknown;
+  imageResponseCards?: ImageResponseCard[];
 }

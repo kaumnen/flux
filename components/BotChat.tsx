@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageSquare, RefreshCw, Send } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { trpc } from "@/lib/trpc/client";
 
-import type { ChatMessage } from "./bot-types";
+import type { ChatMessage, ImageResponseCard } from "./bot-types";
 
 interface BotChatProps {
   botId: string;
@@ -134,70 +135,94 @@ export function BotChat({
     }
   }, [messages]);
 
-  const handleSendMessage = useCallback(async () => {
-    if (!inputValue.trim() || !selectedAliasId || !selectedLocale) return;
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || !selectedAliasId || !selectedLocale) return;
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: inputValue.trim(),
-      timestamp: new Date(),
-    };
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: text.trim(),
+        timestamp: new Date(),
+      };
 
-    setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => [...prev, userMessage]);
+
+      try {
+        const response = await recognizeTextMutation.mutateAsync({
+          botId,
+          botAliasId: selectedAliasId,
+          localeId: selectedLocale,
+          sessionId,
+          text: userMessage.content,
+        });
+
+        const textParts = response.messages
+          ?.map((m) => m.content)
+          .filter(Boolean);
+        const botContent = textParts?.length
+          ? textParts.join("\n")
+          : response.sessionState?.intent
+            ? `[${response.sessionState.intent.name}: ${response.sessionState.intent.state}]`
+            : "No response from bot";
+
+        const imageResponseCards = response.messages
+          ?.map((m) => m.imageResponseCard)
+          .filter((card): card is ImageResponseCard => card != null);
+
+        const botMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "bot",
+          content: botContent,
+          timestamp: new Date(),
+          rawRequest: response.rawRequest,
+          rawResponse: response.rawResponse,
+          sessionState: response.sessionState,
+          interpretations: response.interpretations,
+          imageResponseCards: imageResponseCards?.length
+            ? imageResponseCards
+            : undefined,
+        };
+
+        setMessages((prev) => [...prev, botMessage]);
+        onSelectMessage(botMessage.id);
+      } catch (error) {
+        const errorMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "bot",
+          content: `Error: ${
+            error instanceof Error
+              ? error.message
+              : "Failed to get response from bot"
+          }`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+      }
+    },
+    [
+      selectedAliasId,
+      selectedLocale,
+      sessionId,
+      botId,
+      recognizeTextMutation,
+      onSelectMessage,
+      setMessages,
+    ]
+  );
+
+  const handleSendMessage = useCallback(() => {
+    const text = inputValue;
     setInputValue("");
+    sendMessage(text);
+  }, [inputValue, sendMessage]);
 
-    try {
-      const response = await recognizeTextMutation.mutateAsync({
-        botId,
-        botAliasId: selectedAliasId,
-        localeId: selectedLocale,
-        sessionId,
-        text: userMessage.content,
-      });
-
-      const botContent =
-        response.messages?.map((m) => m.content).join("\n") ||
-        (response.sessionState?.intent
-          ? `[${response.sessionState.intent.name}: ${response.sessionState.intent.state}]`
-          : "No response from bot");
-
-      const botMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "bot",
-        content: botContent,
-        timestamp: new Date(),
-        rawRequest: response.rawRequest,
-        rawResponse: response.rawResponse,
-        sessionState: response.sessionState,
-        interpretations: response.interpretations,
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-      onSelectMessage(botMessage.id);
-    } catch (error) {
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "bot",
-        content: `Error: ${
-          error instanceof Error
-            ? error.message
-            : "Failed to get response from bot"
-        }`,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
-  }, [
-    inputValue,
-    selectedAliasId,
-    selectedLocale,
-    sessionId,
-    botId,
-    recognizeTextMutation,
-    onSelectMessage,
-    setMessages,
-  ]);
+  const handleCardButtonClick = useCallback(
+    (value: string) => {
+      sendMessage(value);
+    },
+    [sendMessage]
+  );
 
   const handleResetSession = useCallback(() => {
     setSessionId(generateSessionId());
@@ -335,6 +360,45 @@ export function BotChat({
                     }
                   >
                     {message.content}
+                    {message.imageResponseCards?.map((card) => (
+                      <div
+                        key={card.title}
+                        className="mt-2 border rounded-md p-2 bg-background"
+                      >
+                        <p className="font-semibold text-sm">{card.title}</p>
+                        {card.subtitle && (
+                          <p className="text-xs text-muted-foreground">
+                            {card.subtitle}
+                          </p>
+                        )}
+                        {card.imageUrl && (
+                          <Image
+                            src={card.imageUrl}
+                            alt={card.title}
+                            width={300}
+                            height={200}
+                            className="mt-1 rounded max-w-full"
+                          />
+                        )}
+                        {card.buttons && card.buttons.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {card.buttons.map((btn) => (
+                              <button
+                                key={btn.value}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardButtonClick(btn.value);
+                                }}
+                                className="px-2 py-1 text-xs rounded border bg-primary/10 hover:bg-primary/20 transition-colors"
+                              >
+                                {btn.text}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </button>
                 </div>
               );
