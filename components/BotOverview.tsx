@@ -8,6 +8,7 @@ import {
   Code,
   GitBranch,
   Globe,
+  Info,
   MessageSquare,
   Shield,
   Tag,
@@ -34,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -190,35 +192,23 @@ export function BotOverview({ botId }: BotOverviewProps) {
 
       {/* Basic Info */}
       <Card>
-        <CardContent className="pt-4 space-y-3">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Info className="size-4" />
+            Bot Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Bot ID</span>
             <span className="font-mono text-sm">{bot.botId}</span>
           </div>
+          <Separator />
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground">Type</span>
             <span className="text-sm">{bot.botType ?? "Standard"}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Calendar className="size-3" />
-              Created
-            </span>
-            <DateTimeDisplay
-              dateString={bot.creationDateTime}
-              className="text-right"
-            />
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Clock className="size-3" />
-              Updated
-            </span>
-            <DateTimeDisplay
-              dateString={bot.lastUpdatedDateTime}
-              className="text-right"
-            />
-          </div>
+          <Separator />
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Clock className="size-3" />
@@ -228,6 +218,7 @@ export function BotOverview({ botId }: BotOverviewProps) {
               {formatDuration(bot.idleSessionTTLInSeconds)}
             </span>
           </div>
+          <Separator />
           <div className="flex justify-between">
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Shield className="size-3" />
@@ -239,7 +230,30 @@ export function BotOverview({ botId }: BotOverviewProps) {
                 : "Not child-directed"}
             </span>
           </div>
-          <div className="pt-2 border-t">
+          <Separator />
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Calendar className="size-3" />
+              Created
+            </span>
+            <DateTimeDisplay
+              dateString={bot.creationDateTime}
+              className="text-right"
+            />
+          </div>
+          <Separator />
+          <div className="flex justify-between">
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Clock className="size-3" />
+              Updated
+            </span>
+            <DateTimeDisplay
+              dateString={bot.lastUpdatedDateTime}
+              className="text-right"
+            />
+          </div>
+          <Separator />
+          <div>
             <span className="text-sm text-muted-foreground">IAM Role</span>
             <p className="font-mono text-xs break-all mt-1">
               {bot.roleArn ?? "N/A"}
