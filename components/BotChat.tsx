@@ -333,73 +333,78 @@ export function BotChat({
                       #{interactionNum}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      message.role === "bot" && onSelectMessage(message.id)
-                    }
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm text-left transition-all duration-200 ${
-                      message.role === "user"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted cursor-pointer hover:bg-muted/80"
-                    } ${
-                      isHighlighted
-                        ? `ring-2 scale-[1.02] shadow-lg ${
-                            message.role === "user"
-                              ? "ring-primary ring-offset-2 ring-offset-background"
-                              : "ring-primary"
-                          }`
-                        : selectedMessageId === message.id
-                          ? "ring-2 ring-primary/50"
+                  {message.role === "user" ? (
+                    <div
+                      className={`max-w-[80%] rounded-lg px-3 py-2 text-sm text-left transition-all duration-200 bg-primary text-primary-foreground ${
+                        isHighlighted
+                          ? "ring-2 scale-[1.02] shadow-lg ring-primary ring-offset-2 ring-offset-background"
                           : ""
-                    }`}
-                    aria-label={
-                      message.role === "bot"
-                        ? "Select message for debug details"
-                        : "User message"
-                    }
-                  >
-                    {message.content}
-                    {message.imageResponseCards?.map((card) => (
-                      <div
-                        key={card.title}
-                        className="mt-2 border rounded-md p-2 bg-background"
-                      >
-                        <p className="font-semibold text-sm">{card.title}</p>
-                        {card.subtitle && (
-                          <p className="text-xs text-muted-foreground">
-                            {card.subtitle}
-                          </p>
-                        )}
-                        {card.imageUrl && (
-                          <Image
-                            src={card.imageUrl}
-                            alt={card.title}
-                            width={300}
-                            height={200}
-                            className="mt-1 rounded max-w-full"
-                          />
-                        )}
-                        {card.buttons && card.buttons.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {card.buttons.map((btn) => (
-                              <button
-                                key={btn.value}
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCardButtonClick(btn.value);
-                                }}
-                                className="px-2 py-1 text-xs rounded border bg-primary/10 hover:bg-primary/20 transition-colors"
-                              >
-                                {btn.text}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </button>
+                      }`}
+                    >
+                      {message.content}
+                    </div>
+                  ) : (
+                    // biome-ignore lint/a11y/useSemanticElements: using div instead of button to allow text selection
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => onSelectMessage(message.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          onSelectMessage(message.id);
+                        }
+                      }}
+                      className={`max-w-[80%] rounded-lg px-3 py-2 text-sm text-left transition-all duration-200 bg-muted cursor-pointer hover:bg-muted/80 ${
+                        isHighlighted
+                          ? "ring-2 scale-[1.02] shadow-lg ring-primary"
+                          : selectedMessageId === message.id
+                            ? "ring-2 ring-primary/50"
+                            : ""
+                      }`}
+                      aria-label="Select message for debug details"
+                    >
+                      {message.content}
+                      {message.imageResponseCards?.map((card) => (
+                        <div
+                          key={card.title}
+                          className="mt-2 border rounded-md p-2 bg-background"
+                        >
+                          <p className="font-semibold text-sm">{card.title}</p>
+                          {card.subtitle && (
+                            <p className="text-xs text-muted-foreground">
+                              {card.subtitle}
+                            </p>
+                          )}
+                          {card.imageUrl && (
+                            <Image
+                              src={card.imageUrl}
+                              alt={card.title}
+                              width={300}
+                              height={200}
+                              className="mt-1 rounded max-w-full"
+                            />
+                          )}
+                          {card.buttons && card.buttons.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {card.buttons.map((btn) => (
+                                <button
+                                  key={btn.value}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleCardButtonClick(btn.value);
+                                  }}
+                                  className="px-2 py-1 text-xs rounded border bg-primary/10 hover:bg-primary/20 transition-colors"
+                                >
+                                  {btn.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })
